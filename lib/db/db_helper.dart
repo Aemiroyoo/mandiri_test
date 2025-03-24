@@ -80,6 +80,7 @@ class DBHelper {
     return await db.delete(_tableName, where: 'id = ?', whereArgs: [id]);
   }
 
+  /// Penjualan
   // Insert penjualan
   static Future<int> insertPenjualan(Penjualan penjualan) async {
     final db = await initDb();
@@ -107,5 +108,23 @@ class DBHelper {
         .toIso8601String()
         .substring(0, 10);
     await db.delete('penjualan', where: 'tanggal < ?', whereArgs: [cutoffDate]);
+  }
+
+  /// CRUD Riwayat Penjualan
+  // Update
+  static Future<int> updatePenjualan(Penjualan data) async {
+    final db = await initDb();
+    return await db.update(
+      'penjualan',
+      data.toMap(),
+      where: 'id = ?',
+      whereArgs: [data.id],
+    );
+  }
+
+  // Delete
+  static Future<int> deletePenjualanById(int id) async {
+    final db = await initDb();
+    return await db.delete('penjualan', where: 'id = ?', whereArgs: [id]);
   }
 }

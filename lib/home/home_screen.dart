@@ -1,3 +1,4 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:mandiri_test/sign_in/login_screen.dart';
@@ -34,11 +35,16 @@ class HomeScreen extends StatelessWidget {
                   IconButton(
                     icon: Icon(Icons.logout),
                     onPressed: () async {
-                      // await FirebaseAuth.instance.signOut();
-                      Navigator.of(context).pushReplacement(
-                        MaterialPageRoute(builder: (context) => LoginScreen()),
-                      );
+                      await FirebaseAuth.instance.signOut();
+
+                      // Arahkan kembali ke halaman login
+                      Navigator.pushReplacementNamed(context, '/login');
                     },
+                    // onPressed: () async {
+                    //   Navigator.of(context).pushReplacement(
+                    //     MaterialPageRoute(builder: (context) => LoginScreen()),
+                    //   );
+                    // },
                   ),
                 ],
               ),

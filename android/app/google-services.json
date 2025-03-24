@@ -1,0 +1,76 @@
+{
+  "project_info": {
+    "project_number": "866757867607",
+    "project_id": "kunaproject-firebase",
+    "storage_bucket": "kunaproject-firebase.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:866757867607:android:9570a341034c9e995dcb12",
+        "android_client_info": {
+          "package_name": "com.example.kunaproject"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "866757867607-g965jns41bkt9kgb2h3q91paob9dtvgc.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.kunaproject",
+            "certificate_hash": "1276dd26313ebe1e73dbf3cb304f5bb21134cb24"
+          }
+        },
+        {
+          "client_id": "866757867607-ltdou15mpor920hf467ljub9c0alanjk.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDaJ1nFadyto-arT0KnpivslD6CmwNDYqo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "866757867607-ltdou15mpor920hf467ljub9c0alanjk.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:866757867607:android:132d68c707b65b875dcb12",
+        "android_client_info": {
+          "package_name": "com.example.mandiri_test"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "866757867607-ltdou15mpor920hf467ljub9c0alanjk.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDaJ1nFadyto-arT0KnpivslD6CmwNDYqo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "866757867607-ltdou15mpor920hf467ljub9c0alanjk.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

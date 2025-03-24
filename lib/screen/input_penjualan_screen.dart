@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:mandiri_test/models/penjualan.dart';
+import 'package:mandiri_test/screen/riwayat_penjualan_screen.dart';
 import '../db/db_helper.dart';
 import '../models/layanan_laundry.dart';
 
@@ -68,6 +69,19 @@ class _InputPenjualanScreenState extends State<InputPenjualanScreen> {
 
     await DBHelper.insertPenjualan(penjualan);
 
+    // Reset form (opsional)
+    namaPelangganController.clear();
+    jumlahController.clear();
+    layananTerpilih = null;
+    kategoriTerpilih = null;
+    totalHarga = 0;
+
+    // Arahkan ke halaman riwayat
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (context) => RiwayatPenjualanScreen()),
+    );
+
     ScaffoldMessenger.of(currentContext).showSnackBar(
       SnackBar(
         content: Text("Data penjualan berhasil disimpan"),
@@ -104,7 +118,10 @@ class _InputPenjualanScreenState extends State<InputPenjualanScreen> {
 
             // Dropdown Kategori
             DropdownButtonFormField<String>(
-              value: kategoriTerpilih,
+              value:
+                  listKategori.contains(kategoriTerpilih)
+                      ? kategoriTerpilih
+                      : null,
               hint: Text("Pilih Kategori"),
               items:
                   listKategori.map((kategori) {

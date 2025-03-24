@@ -1,24 +1,67 @@
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:mandiri_test/home/home_screen.dart';
 import 'package:mandiri_test/sign_up/signup_screen.dart';
 
-class LoginScreen extends StatelessWidget {
+class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
+
+  @override
+  State<LoginScreen> createState() => _LoginScreenState();
+}
+
+class _LoginScreenState extends State<LoginScreen> {
+  final emailController = TextEditingController();
+  final passwordController = TextEditingController();
+  bool isLoading = false;
+
+  void signInUser() async {
+    setState(() => isLoading = true);
+    try {
+      await FirebaseAuth.instance.signInWithEmailAndPassword(
+        email: emailController.text.trim(),
+        password: passwordController.text.trim(),
+      );
+
+      // ✅ Login berhasil
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text("Login berhasil!")));
+
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => HomeScreen()),
+      );
+    } on FirebaseAuthException catch (e) {
+      String message = '';
+      if (e.code == 'user-not-found') {
+        message = 'Email tidak ditemukan';
+      } else if (e.code == 'wrong-password') {
+        message = 'Password salah';
+      } else {
+        message = 'Terjadi kesalahan: ${e.message}';
+      }
+
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(message)));
+    } finally {
+      setState(() => isLoading = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      resizeToAvoidBottomInset: false, // untuk menghindari error overflow
-      backgroundColor: Color(0xFF00224F), // Warna dari Figma
+      resizeToAvoidBottomInset: false,
+      backgroundColor: Color(0xFF00224F),
       body: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 22.0),
         child: Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              // Teks Selamat Datang
               Align(
                 alignment: Alignment.centerLeft,
                 child: Text(
@@ -53,15 +96,12 @@ class LoginScreen extends StatelessWidget {
               Text(
                 "Welcome back, please\nsign in again",
                 textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Colors.white.withOpacity(0.6),
-                ),
+                style: TextStyle(fontSize: 14, color: Colors.white70),
               ),
               SizedBox(height: 20),
 
-              // Input Email
               TextField(
+                controller: emailController,
                 style: TextStyle(color: Colors.white),
                 decoration: InputDecoration(
                   hintText: "Email",
@@ -75,9 +115,8 @@ class LoginScreen extends StatelessWidget {
                 ),
               ),
               SizedBox(height: 16),
-
-              // Input Password
               TextField(
+                controller: passwordController,
                 obscureText: true,
                 style: TextStyle(color: Colors.white),
                 decoration: InputDecoration(
@@ -93,15 +132,8 @@ class LoginScreen extends StatelessWidget {
               ),
               SizedBox(height: 30),
 
-              // Tombol Login
               ElevatedButton(
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => HomeScreen()),
-                  );
-                  // print("Login button pressed");
-                },
+                onPressed: isLoading ? null : signInUser,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.white,
                   minimumSize: Size(double.infinity, 50),
@@ -109,131 +141,67 @@ class LoginScreen extends StatelessWidget {
                     borderRadius: BorderRadius.circular(30),
                   ),
                 ),
-                child: Text(
-                  "Sign In",
-                  style: TextStyle(
-                    fontSize: 17,
-                    color: const Color.fromARGB(255, 0, 34, 79),
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
+                child:
+                    isLoading
+                        ? CircularProgressIndicator()
+                        : Text(
+                          "Sign In",
+                          style: TextStyle(
+                            fontSize: 17,
+                            color: Color(0xFF00224F),
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
               ),
-
               SizedBox(height: 20),
 
-              // Garis dan Teks "or"
               Row(
                 children: [
-                  Expanded(
-                    child: Divider(
-                      color: const Color.fromARGB(68, 255, 255, 255),
-                      thickness: 1,
-                    ),
-                  ),
+                  Expanded(child: Divider(color: Colors.white38)),
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 10),
-                    child: Text(
-                      "or",
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
+                    child: Text("or", style: TextStyle(color: Colors.white)),
                   ),
-                  Expanded(
-                    child: Divider(
-                      color: const Color.fromARGB(68, 255, 255, 255),
-                      thickness: 1,
-                    ),
-                  ),
+                  Expanded(child: Divider(color: Colors.white38)),
                 ],
               ),
-
               SizedBox(height: 20),
 
-              // Tombol Login dengan Facebook
               SocialLoginButton(
                 icon: FontAwesomeIcons.facebook,
                 text: "Sign in with Facebook",
                 color: Colors.blue.shade800,
-                onPressed: () {
-                  print("Login with Facebook");
-                },
+                onPressed: () => print("Login with Facebook"),
               ),
-
               SizedBox(height: 10),
-
-              // Tombol Login dengan Gmail
               SocialLoginButton(
                 icon: FontAwesomeIcons.google,
                 text: "Sign in with Gmail",
                 color: Colors.red.shade700,
-                onPressed: () {
-                  print("Login with Google");
-                },
+                onPressed: () => print("Login with Google"),
               ),
-
               SizedBox(height: 10),
-
-              // Teks "Already have an account? Sign In"
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Text(
-                    "Already have an account?",
-                    style: TextStyle(color: Colors.white70, fontSize: 13),
+                    "Belum punya akun?",
+                    style: TextStyle(color: Colors.white70),
                   ),
                   TextButton(
                     onPressed: () {
                       Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (context) => SignupScreen()),
+                        MaterialPageRoute(builder: (_) => SignupScreen()),
                       );
                     },
-                    child: Text(
-                      "Sign Up",
-                      style: TextStyle(
-                        color: Colors.blueAccent,
-                        fontSize: 15,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
+                    child: Text("Sign Up"),
                   ),
                 ],
               ),
             ],
           ),
         ),
-      ),
-    );
-  }
-}
-
-// Widget Tombol Social Login
-class SocialLoginButton extends StatelessWidget {
-  final IconData icon;
-  final String text;
-  final Color color;
-  final VoidCallback onPressed;
-
-  const SocialLoginButton({
-    super.key,
-    required this.icon,
-    required this.text,
-    required this.color,
-    required this.onPressed,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return ElevatedButton.icon(
-      onPressed: onPressed,
-      icon: FaIcon(icon, color: Colors.white),
-      label: Text(text, style: TextStyle(fontSize: 16, color: Colors.white)),
-      style: ElevatedButton.styleFrom(
-        backgroundColor: color,
-        minimumSize: Size(double.infinity, 50),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       ),
     );
   }

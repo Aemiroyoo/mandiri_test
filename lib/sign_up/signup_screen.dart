@@ -1,3 +1,4 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:mandiri_test/sign_in/login_screen.dart';
@@ -11,6 +12,9 @@ class SignupScreen extends StatefulWidget {
 
 class _SignupScreenState extends State<SignupScreen> {
   @override
+  final TextEditingController emailController = TextEditingController();
+  final TextEditingController passwordController = TextEditingController();
+
   Widget build(BuildContext context) {
     return Scaffold(
       resizeToAvoidBottomInset: false, // untuk menghindari error overflow
@@ -97,6 +101,7 @@ class _SignupScreenState extends State<SignupScreen> {
 
               // Input Email
               TextField(
+                controller: emailController,
                 style: TextStyle(color: Colors.white),
                 decoration: InputDecoration(
                   hintText: "Email",
@@ -113,6 +118,7 @@ class _SignupScreenState extends State<SignupScreen> {
 
               // Input Password
               TextField(
+                controller: passwordController,
                 obscureText: true,
                 style: TextStyle(color: Colors.white),
                 decoration: InputDecoration(
@@ -130,8 +136,37 @@ class _SignupScreenState extends State<SignupScreen> {
 
               // Tombol Login
               ElevatedButton(
-                onPressed: () {
-                  print("Login button pressed");
+                onPressed: () async {
+                  try {
+                    final credential = await FirebaseAuth.instance
+                        .createUserWithEmailAndPassword(
+                          email: emailController.text.trim(),
+                          password: passwordController.text.trim(),
+                        );
+
+                    // Berhasil daftar, bisa arahkan ke halaman login / home
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text("Registrasi berhasil!")),
+                    );
+
+                    Navigator.pushReplacement(
+                      context,
+                      MaterialPageRoute(builder: (context) => LoginScreen()),
+                    );
+                  } on FirebaseAuthException catch (e) {
+                    String msg = '';
+                    if (e.code == 'email-already-in-use') {
+                      msg = 'Email sudah digunakan';
+                    } else if (e.code == 'weak-password') {
+                      msg = 'Password terlalu lemah';
+                    } else {
+                      msg = 'Terjadi kesalahan: ${e.message}';
+                    }
+
+                    ScaffoldMessenger.of(
+                      context,
+                    ).showSnackBar(SnackBar(content: Text(msg)));
+                  }
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.white,
@@ -141,7 +176,7 @@ class _SignupScreenState extends State<SignupScreen> {
                   ),
                 ),
                 child: Text(
-                  "Sign In",
+                  "Sign Up",
                   style: TextStyle(
                     fontSize: 17,
                     color: const Color.fromARGB(255, 0, 34, 79),
