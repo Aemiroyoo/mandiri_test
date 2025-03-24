@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
-import 'package:mandiri_test/home/home_scree.dart';
+import 'package:mandiri_test/home/home_screen.dart';
 import 'package:mandiri_test/sign_up/signup_screen.dart';
 
 class LoginScreen extends StatelessWidget {
+  const LoginScreen({super.key});
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -215,6 +217,7 @@ class SocialLoginButton extends StatelessWidget {
   final VoidCallback onPressed;
 
   const SocialLoginButton({
+    super.key,
     required this.icon,
     required this.text,
     required this.color,

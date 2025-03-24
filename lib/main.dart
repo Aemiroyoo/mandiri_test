@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:mandiri_test/screen/daftar_harga_screen.dart';
+import 'package:mandiri_test/screen/input_penjualan_screen.dart';
 import 'package:mandiri_test/sign_in/login_screen.dart';
 
 void main() {
@@ -32,7 +34,7 @@ class MyApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
       ),
       debugShowCheckedModeBanner: false,
-      home: LoginScreen(),
+      home: InputPenjualanScreen(),
     );
   }
 }

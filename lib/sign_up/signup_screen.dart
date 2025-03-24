@@ -24,7 +24,7 @@ class _SignupScreenState extends State<SignupScreen> {
             children: [
               Align(
                 alignment: Alignment.centerLeft,
-                child: Container(
+                child: SizedBox(
                   width: 150,
                   child: ListTile(
                     leading: const Icon(
@@ -166,6 +166,7 @@ class SocialLoginButton extends StatelessWidget {
   final VoidCallback onPressed;
 
   const SocialLoginButton({
+    super.key,
     required this.icon,
     required this.text,
     required this.color,
