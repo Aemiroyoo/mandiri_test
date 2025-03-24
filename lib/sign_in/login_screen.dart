@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:mandiri_test/home/home_scree.dart';
 import 'package:mandiri_test/sign_up/signup_screen.dart';
 
 class LoginScreen extends StatelessWidget {
@@ -93,7 +94,11 @@ class LoginScreen extends StatelessWidget {
               // Tombol Login
               ElevatedButton(
                 onPressed: () {
-                  print("Login button pressed");
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => HomeScreen()),
+                  );
+                  // print("Login button pressed");
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.white,
