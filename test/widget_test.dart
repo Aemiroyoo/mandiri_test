@@ -13,7 +13,10 @@ import 'package:mandiri_test/main.dart';
 void main() {
   testWidgets('Counter increments smoke test', (WidgetTester tester) async {
     // Build our app and trigger a frame.
-    await tester.pumpWidget(const MyApp());
+    // await tester.pumpWidget(const MyApp());
+    await tester.pumpWidget(
+      MyApp(isLoggedIn: false),
+    ); // atau true, sesuai test kamu
 
     // Verify that our counter starts at 0.
     expect(find.text('0'), findsOneWidget);

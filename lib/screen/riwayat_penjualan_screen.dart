@@ -3,6 +3,7 @@ import 'package:mandiri_test/models/layanan_laundry.dart';
 import 'package:mandiri_test/screen/input_penjualan_screen.dart';
 import '../db/db_helper.dart';
 import '../models/penjualan.dart';
+import 'package:intl/intl.dart';
 
 class RiwayatPenjualanScreen extends StatefulWidget {
   @override
@@ -10,6 +11,11 @@ class RiwayatPenjualanScreen extends StatefulWidget {
 }
 
 class _RiwayatPenjualanScreenState extends State<RiwayatPenjualanScreen> {
+  final _formatCurrency = NumberFormat.currency(
+    locale: 'id_ID',
+    symbol: 'Rp. ',
+    decimalDigits: 0,
+  );
   List<Penjualan> dataPenjualan = [];
   List<LayananLaundry> semuaLayanan = [];
   List<String> listKategori = [];
@@ -282,12 +288,13 @@ class _RiwayatPenjualanScreenState extends State<RiwayatPenjualanScreen> {
                             crossAxisAlignment: CrossAxisAlignment.end,
                             children: [
                               Text(
-                                "Rp. ${item.total},- ",
+                                "${_formatCurrency.format(item.total)}",
                                 style: TextStyle(
                                   fontWeight: FontWeight.bold,
                                   fontSize: 16,
                                 ),
                               ),
+
                               Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [

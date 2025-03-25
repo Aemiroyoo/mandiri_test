@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:mandiri_test/screen/form_layanan_screen.dart';
 import '../db/db_helper.dart';
 import '../models/layanan_laundry.dart';
+import 'package:intl/intl.dart';
 
 class DaftarHargaScreen extends StatefulWidget {
   @override
@@ -9,6 +10,7 @@ class DaftarHargaScreen extends StatefulWidget {
 }
 
 class _DaftarHargaScreenState extends State<DaftarHargaScreen> {
+  final _formatCurrency = NumberFormat('#,###', 'id_ID');
   List<LayananLaundry> daftarHarga = [];
 
   @override
@@ -31,8 +33,24 @@ class _DaftarHargaScreenState extends State<DaftarHargaScreen> {
       text: layanan.namaLayanan,
     );
     final TextEditingController hargaController = TextEditingController(
-      text: layanan.harga.toString(),
+      text: NumberFormat('#,###', 'id_ID').format(layanan.harga),
     );
+
+    // ✅ Pindahkan ke atas
+
+    hargaController.addListener(() {
+      final text = hargaController.text.replaceAll('.', '');
+      final value = int.tryParse(text);
+      if (value != null) {
+        final newText = _formatCurrency.format(value);
+        if (newText != hargaController.text) {
+          hargaController.value = TextEditingValue(
+            text: newText,
+            selection: TextSelection.collapsed(offset: newText.length),
+          );
+        }
+      }
+    });
 
     String? kategori = layanan.kategori;
     String? satuan = layanan.satuan;
@@ -70,7 +88,12 @@ class _DaftarHargaScreenState extends State<DaftarHargaScreen> {
                       validator: (value) {
                         if (value == null || value.isEmpty) {
                           return "Harga tidak boleh kosong";
-                        } else if (int.tryParse(value) == null) {
+                        }
+                        final cleaned = value.replaceAll(
+                          '.',
+                          '',
+                        ); // 👉 hilangkan titik
+                        if (int.tryParse(cleaned) == null) {
                           return "Harga harus berupa angka";
                         }
                         return null;
@@ -125,7 +148,10 @@ class _DaftarHargaScreenState extends State<DaftarHargaScreen> {
                         id: layanan.id,
                         namaLayanan: namaController.text,
                         kategori: kategori!,
-                        harga: int.parse(hargaController.text),
+                        harga: int.parse(
+                          hargaController.text.replaceAll('.', ''),
+                        ),
+
                         satuan: satuan!,
                       );
 
@@ -212,7 +238,7 @@ class _DaftarHargaScreenState extends State<DaftarHargaScreen> {
                     ),
                     elevation: 2,
                     child: Padding(
-                      padding: const EdgeInsets.all(12),
+                      padding: const EdgeInsets.all(14),
                       child: Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -240,27 +266,38 @@ class _DaftarHargaScreenState extends State<DaftarHargaScreen> {
                             ),
                           ),
 
-                          // Kanan: Harga + Icon Edit + Icon Delete (dalam satu Row)
-                          Row(
-                            mainAxisSize: MainAxisSize.min,
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.end,
                             children: [
                               Text(
-                                "Rp. ${item.harga},-",
-                                style: TextStyle(fontWeight: FontWeight.bold),
-                              ),
-                              SizedBox(width: 8),
-                              IconButton(
-                                icon: Icon(Icons.edit, size: 20),
-                                onPressed: () => showEditDialog(item),
-                              ),
-                              IconButton(
-                                icon: Icon(
-                                  Icons.delete,
-                                  size: 20,
-                                  color: Colors.red,
+                                "Rp. ${_formatCurrency.format(item.harga)},-",
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 16,
                                 ),
-                                onPressed:
-                                    () => _showDeleteConfirmation(item.id!),
+                              ),
+                              Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  IconButton(
+                                    icon: Icon(Icons.edit, size: 18),
+                                    padding: EdgeInsets.zero,
+                                    constraints: BoxConstraints(),
+                                    onPressed: () => showEditDialog(item),
+                                  ),
+                                  SizedBox(width: 2),
+                                  IconButton(
+                                    icon: Icon(
+                                      Icons.delete,
+                                      size: 18,
+                                      color: Colors.red,
+                                    ),
+                                    padding: EdgeInsets.zero,
+                                    constraints: BoxConstraints(),
+                                    onPressed:
+                                        () => _showDeleteConfirmation(item.id!),
+                                  ),
+                                ],
                               ),
                             ],
                           ),

@@ -1,10 +1,46 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
+import 'package:intl/intl.dart';
+import '../db/db_helper.dart';
+import '../models/penjualan.dart';
+
 import 'package:mandiri_test/sign_in/login_screen.dart';
 
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
+
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  int totalPemasukan = 0;
+  int totalOrder = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    loadMonthlyData();
+  }
+
+  Future<void> loadMonthlyData() async {
+    final now = DateTime.now();
+    final bulanIni = DateFormat('yyyy-MM').format(now); // contoh: 2025-03
+
+    List<Penjualan> semua = await DBHelper.getAllPenjualan();
+
+    final dataBulanIni =
+        semua.where((e) => e.tanggal.startsWith(bulanIni)).toList();
+
+    totalPemasukan = dataBulanIni.fold(0, (total, item) => total + item.total);
+    totalOrder = dataBulanIni.length;
+
+    setState(() {});
+  }
+
+  // class HomeScreen extends StatelessWidget {
+  //   const HomeScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -93,10 +129,16 @@ class HomeScreen extends StatelessWidget {
                           children: [
                             Text(
                               "Total Pemasukan",
-                              style: TextStyle(fontWeight: FontWeight.bold),
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                              ),
                             ),
                             SizedBox(height: 8),
-                            Text("Rp. ,-"),
+                            Text(
+                              "Rp. ${NumberFormat("#,###").format(totalPemasukan)},-",
+                              style: TextStyle(fontSize: 14),
+                            ),
                           ],
                         ),
                       ),
@@ -112,10 +154,16 @@ class HomeScreen extends StatelessWidget {
                           children: [
                             Text(
                               "Jumlah Order",
-                              style: TextStyle(fontWeight: FontWeight.bold),
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                              ),
                             ),
                             SizedBox(height: 8),
-                            Text("Total: "),
+                            Text(
+                              "Total: $totalOrder",
+                              style: TextStyle(fontSize: 14),
+                            ),
                           ],
                         ),
                       ),
@@ -123,7 +171,7 @@ class HomeScreen extends StatelessWidget {
                   ),
                 ],
               ),
-              SizedBox(height: 16),
+              SizedBox(height: 26),
 
               // Grafik Penjualan
               Column(
@@ -189,24 +237,24 @@ class HomeScreen extends StatelessWidget {
                   ),
                 ],
               ),
-              SizedBox(height: 24),
+              // SizedBox(height: 24),
 
               // Menu Data Penjualan
-              Text(
-                "Menu Data Penjualan",
-                style: TextStyle(fontWeight: FontWeight.bold),
-              ),
-              SizedBox(height: 12),
-              Wrap(
-                spacing: 10,
-                runSpacing: 12,
-                children: [
-                  menuButton("Data\nHarian", width: 82, height: 83),
-                  menuButton("Data\nMingguan", width: 82, height: 83),
-                  menuButton("Data\nBulanan", width: 82, height: 83),
-                  menuButton("Data\nTahunan", width: 82, height: 83),
-                ],
-              ),
+              // Text(
+              //   "Menu Data Penjualan",
+              //   style: TextStyle(fontWeight: FontWeight.bold),
+              // ),
+              // SizedBox(height: 12),
+              // Wrap(
+              //   spacing: 10,
+              //   runSpacing: 12,
+              //   children: [
+              //     menuButton("Data\nHarian", width: 82, height: 83),
+              //     menuButton("Data\nMingguan", width: 82, height: 83),
+              //     menuButton("Data\nBulanan", width: 82, height: 83),
+              //     menuButton("Data\nTahunan", width: 82, height: 83),
+              //   ],
+              // ),
               SizedBox(height: 24),
 
               // Menu Admin
@@ -216,10 +264,24 @@ class HomeScreen extends StatelessWidget {
                 spacing: 14,
                 runSpacing: 14,
                 children: [
-                  menuButton1("Daftar Barang"),
-                  menuButton1("Barang Dibeli"),
-                  menuButton1("Data Penjualan"),
-                  menuButton1("Input Penjualan"),
+                  menuButton1("Daftar Barang", () {
+                    Navigator.pushNamed(
+                      context,
+                      '/daftar-harga',
+                    ); // misalnya ini screen daftar harga
+                  }),
+                  menuButton1("Input Penjualan", () {
+                    Navigator.pushNamed(context, '/input-penjualan');
+                  }),
+                  menuButton1("Riwayat Penjualan", () {
+                    Navigator.pushNamed(
+                      context,
+                      '/riwayat-penjualan',
+                    ); // ganti kalau punya screen khusus
+                  }),
+                  menuButton1("Laporan Penjualan", () {
+                    Navigator.pushNamed(context, '/laporan-penjualan');
+                  }),
                 ],
               ),
             ],
@@ -246,16 +308,20 @@ class HomeScreen extends StatelessWidget {
     );
   }
 
-  Widget menuButton1(String title) {
-    return Container(
-      width: 170,
-      height: 60,
-      decoration: BoxDecoration(
-        color: Colors.grey.shade200,
-        borderRadius: BorderRadius.circular(8),
+  Widget menuButton1(String title, VoidCallback onTap) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        margin: EdgeInsets.all(2),
+        padding: EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+        decoration: BoxDecoration(
+          color: Colors.grey.shade200,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Center(
+          child: Text(title, style: TextStyle(fontWeight: FontWeight.bold)),
+        ),
       ),
-      alignment: Alignment.center,
-      child: Text(title, style: TextStyle(fontWeight: FontWeight.w500)),
     );
   }
 }

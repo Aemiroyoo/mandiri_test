@@ -9,8 +9,15 @@ class LaporanPenjualanScreen extends StatefulWidget {
 }
 
 class _LaporanPenjualanScreenState extends State<LaporanPenjualanScreen> {
+  int limit = 10; // batas awal
   int totalIncome = 0;
-  List<Penjualan> penjualanBulanIni = [];
+  int totalFiltered = 0;
+
+  List<Penjualan> semuaData = [];
+  List<Penjualan> dataTampil = [];
+
+  String selectedFilter = 'Semua';
+  final filterOptions = ['Semua', 'Hari ini', 'Minggu ini', 'Bulan ini'];
 
   @override
   void initState() {
@@ -19,17 +26,55 @@ class _LaporanPenjualanScreenState extends State<LaporanPenjualanScreen> {
   }
 
   Future<void> loadLaporan() async {
+    semuaData = await DBHelper.getAllPenjualan();
+    _filterData();
+  }
+
+  void _filterData() {
     final now = DateTime.now();
-    final formatter = DateFormat('yyyy-MM');
-    final bulanIni = formatter.format(now); // ex: 2025-03
+    List<Penjualan> filtered = [];
 
-    List<Penjualan> semuaData = await DBHelper.getAllPenjualan();
-    penjualanBulanIni =
-        semuaData.where((e) => e.tanggal.startsWith(bulanIni)).toList();
+    if (selectedFilter == 'Hari ini') {
+      String today = DateFormat('yyyy-MM-dd').format(now);
+      filtered = semuaData.where((e) => e.tanggal == today).toList();
+    } else if (selectedFilter == 'Minggu ini') {
+      DateTime startOfWeek = now.subtract(Duration(days: now.weekday - 1));
+      filtered =
+          semuaData.where((e) {
+            DateTime date = DateTime.parse(e.tanggal);
+            return date.isAfter(startOfWeek.subtract(Duration(days: 1)));
+          }).toList();
+    } else if (selectedFilter == 'Bulan ini') {
+      String bulanIni = DateFormat('yyyy-MM').format(now);
+      filtered =
+          semuaData.where((e) => e.tanggal.startsWith(bulanIni)).toList();
+    } else {
+      filtered = semuaData;
+    }
 
-    totalIncome = penjualanBulanIni.fold(0, (sum, item) => sum + item.total);
-
+    totalFiltered = filtered.length;
+    totalIncome = filtered.fold(0, (sum, item) => sum + item.total);
+    dataTampil = filtered.take(limit).toList();
     setState(() {});
+  }
+
+  List<Penjualan> _filteredList() {
+    final now = DateTime.now();
+    if (selectedFilter == 'Hari ini') {
+      String today = DateFormat('yyyy-MM-dd').format(now);
+      return semuaData.where((e) => e.tanggal == today).toList();
+    } else if (selectedFilter == 'Minggu ini') {
+      DateTime startOfWeek = now.subtract(Duration(days: now.weekday - 1));
+      return semuaData.where((e) {
+        DateTime date = DateTime.parse(e.tanggal);
+        return date.isAfter(startOfWeek.subtract(Duration(days: 1)));
+      }).toList();
+    } else if (selectedFilter == 'Bulan ini') {
+      String bulanIni = DateFormat('yyyy-MM').format(now);
+      return semuaData.where((e) => e.tanggal.startsWith(bulanIni)).toList();
+    } else {
+      return semuaData;
+    }
   }
 
   @override
@@ -43,9 +88,39 @@ class _LaporanPenjualanScreenState extends State<LaporanPenjualanScreen> {
         padding: EdgeInsets.all(16),
         child: Column(
           children: [
+            // Filter Dropdown
+            Padding(
+              padding: const EdgeInsets.only(left: 5),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.start,
+                children: [
+                  Text(
+                    "Filter Data Penjualan",
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                  ),
+                  SizedBox(width: 40),
+                  DropdownButton<String>(
+                    value: selectedFilter,
+                    items:
+                        filterOptions.map((f) {
+                          return DropdownMenuItem(value: f, child: Text(f));
+                        }).toList(),
+                    onChanged: (value) {
+                      setState(() {
+                        selectedFilter = value!;
+                        _filterData();
+                      });
+                    },
+                  ),
+                ],
+              ),
+            ),
+
+            SizedBox(height: 16),
+
             // Card Income
             Container(
-              padding: EdgeInsets.all(16),
+              padding: EdgeInsets.all(20),
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(16),
@@ -64,17 +139,22 @@ class _LaporanPenjualanScreenState extends State<LaporanPenjualanScreen> {
                           fontWeight: FontWeight.bold,
                         ),
                       ),
+                      SizedBox(height: 1),
+
+                      // SizedBox(height: 8),
                       Text("Income"),
                     ],
                   ),
-                  Icon(Icons.account_balance_wallet, size: 30),
+
+                  // Text("Income"),
+                  Icon(Icons.account_balance_wallet, size: 45),
                 ],
               ),
             ),
 
             SizedBox(height: 24),
 
-            // Tombol export (dummy dulu)
+            // Tombol Export
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
@@ -93,20 +173,55 @@ class _LaporanPenjualanScreenState extends State<LaporanPenjualanScreen> {
 
             SizedBox(height: 24),
 
-            // Dummy tabel laporan
+            // List Data Tampil
             Expanded(
-              child: ListView.builder(
-                itemCount: penjualanBulanIni.length,
-                itemBuilder: (context, index) {
-                  final item = penjualanBulanIni[index];
-                  return ListTile(
-                    title: Text(item.namaPelanggan),
-                    subtitle: Text(
-                      "${item.namaLayanan} - ${item.jumlah} ${item.satuan}",
+              child: Column(
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.only(left: 14.0),
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        "Total Data: $totalFiltered",
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
                     ),
-                    trailing: Text("Rp. ${item.total},-"),
-                  );
-                },
+                  ),
+                  Expanded(
+                    child:
+                        dataTampil.isEmpty
+                            ? Center(child: Text("Tidak ada data."))
+                            : ListView.builder(
+                              itemCount: dataTampil.length,
+                              itemBuilder: (context, index) {
+                                final item = dataTampil[index];
+                                return ListTile(
+                                  title: Text(item.namaPelanggan),
+                                  subtitle: Text(
+                                    "${item.namaLayanan} - ${item.jumlah} ${item.satuan}",
+                                  ),
+                                  trailing: Text("Rp. ${item.total},-"),
+                                );
+                              },
+                            ),
+                  ),
+
+                  // Tombol Load More jika masih ada data
+                  if (dataTampil.length < semuaData.length &&
+                      dataTampil.length < _filteredList().length)
+                    ElevatedButton(
+                      onPressed: () {
+                        setState(() {
+                          limit += 10;
+                          _filterData();
+                        });
+                      },
+                      child: Text("Load More"),
+                    ),
+                ],
               ),
             ),
           ],
