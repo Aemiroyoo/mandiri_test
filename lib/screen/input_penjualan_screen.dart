@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:mandiri_test/models/penjualan.dart';
 import 'package:mandiri_test/screen/riwayat_penjualan_screen.dart';
+import 'package:mandiri_test/services/firestore_service.dart';
 import '../db/db_helper.dart';
 import '../models/layanan_laundry.dart';
 
@@ -12,26 +14,26 @@ class InputPenjualanScreen extends StatefulWidget {
 class _InputPenjualanScreenState extends State<InputPenjualanScreen> {
   LayananLaundry? layananTerpilih;
   List<LayananLaundry> semuaLayanan = [];
-
   String? kategoriTerpilih;
   List<String> listKategori = [];
   List<LayananLaundry> layananFiltered = [];
+
   final TextEditingController namaPelangganController = TextEditingController();
   final TextEditingController jumlahController = TextEditingController();
+
   int totalHarga = 0;
+  final formatCurrency = NumberFormat('#,###', 'id_ID');
 
   @override
   void initState() {
     super.initState();
     loadDataLayanan();
+    jumlahController.addListener(hitungTotal);
   }
 
   Future<void> loadDataLayanan() async {
-    semuaLayanan = await DBHelper.getAllLayanan();
-
-    // Ambil kategori unik
+    semuaLayanan = await DBHelper().getAllLayanan();
     listKategori = semuaLayanan.map((e) => e.kategori).toSet().toList();
-
     setState(() {});
   }
 
@@ -45,8 +47,6 @@ class _InputPenjualanScreenState extends State<InputPenjualanScreen> {
   }
 
   Future<void> simpanPenjualan() async {
-    final currentContext = context;
-
     if (namaPelangganController.text.isEmpty ||
         layananTerpilih == null ||
         jumlahController.text.isEmpty) {
@@ -64,37 +64,36 @@ class _InputPenjualanScreenState extends State<InputPenjualanScreen> {
       jumlah: int.parse(jumlahController.text),
       total: totalHarga,
       tanggal: DateTime.now().toIso8601String().substring(0, 10),
-      namaPelanggan: namaPelangganController.text, // 🆕
+      namaPelanggan: namaPelangganController.text,
     );
 
-    await DBHelper.insertPenjualan(penjualan);
+    // await DBHelper.insertPenjualan(penjualan);
+    await FirestoreService.tambahPenjualan(penjualan);
 
-    // Reset form (opsional)
     namaPelangganController.clear();
     jumlahController.clear();
     layananTerpilih = null;
     kategoriTerpilih = null;
     totalHarga = 0;
 
-    // Arahkan ke halaman riwayat
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(builder: (context) => RiwayatPenjualanScreen()),
-    );
-
-    ScaffoldMessenger.of(currentContext).showSnackBar(
+    ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text("Data penjualan berhasil disimpan"),
         backgroundColor: Colors.green,
       ),
     );
 
-    // Reset form
-    setState(() {
-      jumlahController.clear();
-      layananTerpilih = null;
-      totalHarga = 0;
-    });
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (context) => RiwayatPenjualanScreen()),
+    );
+  }
+
+  @override
+  void dispose() {
+    namaPelangganController.dispose();
+    jumlahController.dispose();
+    super.dispose();
   }
 
   @override
@@ -109,14 +108,11 @@ class _InputPenjualanScreenState extends State<InputPenjualanScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Input Nama Pelanggan
             TextField(
               controller: namaPelangganController,
               decoration: InputDecoration(labelText: "Nama Pelanggan"),
             ),
             SizedBox(height: 16),
-
-            // Dropdown Kategori
             DropdownButtonFormField<String>(
               value:
                   listKategori.contains(kategoriTerpilih)
@@ -133,18 +129,15 @@ class _InputPenjualanScreenState extends State<InputPenjualanScreen> {
               onChanged: (value) {
                 setState(() {
                   kategoriTerpilih = value;
-                  // filter layanan berdasarkan kategori
                   layananFiltered =
                       semuaLayanan
                           .where((e) => e.kategori == kategoriTerpilih)
                           .toList();
-                  layananTerpilih = null; // reset pilihan layanan
+                  layananTerpilih = null;
                 });
               },
             ),
             SizedBox(height: 16),
-
-            // Dropdown Layanan (Filtered)
             DropdownButtonFormField<LayananLaundry>(
               value: layananTerpilih,
               hint: Text("Pilih Layanan"),
@@ -153,7 +146,7 @@ class _InputPenjualanScreenState extends State<InputPenjualanScreen> {
                     return DropdownMenuItem(
                       value: layanan,
                       child: Text(
-                        "${layanan.namaLayanan} - Rp ${layanan.harga}/${layanan.satuan}",
+                        "${layanan.namaLayanan} - Rp ${formatCurrency.format(layanan.harga)}/${layanan.satuan}",
                       ),
                     );
                   }).toList(),
@@ -165,27 +158,19 @@ class _InputPenjualanScreenState extends State<InputPenjualanScreen> {
               },
             ),
             SizedBox(height: 16),
-
-            // Input Jumlah
             TextField(
               controller: jumlahController,
               keyboardType: TextInputType.number,
               decoration: InputDecoration(
                 labelText: "Jumlah (${layananTerpilih?.satuan ?? '-'})",
               ),
-              onChanged: (value) => hitungTotal(),
             ),
             SizedBox(height: 16),
-
-            // Total Harga
             Text(
-              "Total Harga: Rp $totalHarga,-",
+              "Total Harga: Rp ${formatCurrency.format(totalHarga)},-",
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
-
             Spacer(),
-
-            // Tombol Simpan
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(

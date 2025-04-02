@@ -1,6 +1,6 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import '../db/db_helper.dart';
 import '../models/penjualan.dart';
 
 class LaporanPenjualanScreen extends StatefulWidget {
@@ -9,7 +9,7 @@ class LaporanPenjualanScreen extends StatefulWidget {
 }
 
 class _LaporanPenjualanScreenState extends State<LaporanPenjualanScreen> {
-  int limit = 10; // batas awal
+  int limit = 10;
   int totalIncome = 0;
   int totalFiltered = 0;
 
@@ -26,7 +26,28 @@ class _LaporanPenjualanScreenState extends State<LaporanPenjualanScreen> {
   }
 
   Future<void> loadLaporan() async {
-    semuaData = await DBHelper.getAllPenjualan();
+    final snapshot =
+        await FirebaseFirestore.instance
+            .collection('penjualan')
+            .orderBy('tanggal', descending: true)
+            .get();
+
+    semuaData =
+        snapshot.docs.map((doc) {
+          final data = doc.data();
+          return Penjualan(
+            id: doc.id,
+            layananId: data['layananId'],
+            namaLayanan: data['namaLayanan'],
+            hargaSatuan: data['hargaSatuan'],
+            satuan: data['satuan'],
+            jumlah: data['jumlah'],
+            total: data['total'],
+            tanggal: data['tanggal'],
+            namaPelanggan: data['namaPelanggan'],
+          );
+        }).toList();
+
     _filterData();
   }
 
@@ -139,14 +160,9 @@ class _LaporanPenjualanScreenState extends State<LaporanPenjualanScreen> {
                           fontWeight: FontWeight.bold,
                         ),
                       ),
-                      SizedBox(height: 1),
-
-                      // SizedBox(height: 8),
                       Text("Income"),
                     ],
                   ),
-
-                  // Text("Income"),
                   Icon(Icons.account_balance_wallet, size: 45),
                 ],
               ),
@@ -209,7 +225,6 @@ class _LaporanPenjualanScreenState extends State<LaporanPenjualanScreen> {
                             ),
                   ),
 
-                  // Tombol Load More jika masih ada data
                   if (dataTampil.length < semuaData.length &&
                       dataTampil.length < _filteredList().length)
                     ElevatedButton(

@@ -1,16 +1,16 @@
 class Penjualan {
-  int? id;
-  int layananId;
-  String namaLayanan;
-  int hargaSatuan;
-  String satuan;
-  int jumlah;
-  int total;
-  String tanggal;
-  String namaPelanggan; // 🆕 Tambahan
+  final String? id; // Ubah jadi String?
+  final String namaLayanan;
+  final int hargaSatuan;
+  final String satuan;
+  final int jumlah;
+  final int total;
+  final String tanggal;
+  final String namaPelanggan;
+  final String layananId;
 
   Penjualan({
-    this.id,
+    this.id, // 🔁
     required this.layananId,
     required this.namaLayanan,
     required this.hargaSatuan,
@@ -23,7 +23,6 @@ class Penjualan {
 
   Map<String, dynamic> toMap() {
     return {
-      'id': id,
       'layanan_id': layananId,
       'nama_layanan': namaLayanan,
       'harga_satuan': hargaSatuan,
@@ -31,13 +30,14 @@ class Penjualan {
       'jumlah': jumlah,
       'total': total,
       'tanggal': tanggal,
-      'nama_pelanggan': namaPelanggan, // 🆕 Tambahan
+      'nama_pelanggan': namaPelanggan,
     };
   }
 
+  // kalau kamu masih pakai .fromMap dan toMap, sesuaikan juga:
   factory Penjualan.fromMap(Map<String, dynamic> map) {
     return Penjualan(
-      id: map['id'],
+      id: map['id'], // ini string kalau dari Firestore
       layananId: map['layanan_id'],
       namaLayanan: map['nama_layanan'],
       hargaSatuan: map['harga_satuan'],
@@ -45,7 +45,7 @@ class Penjualan {
       jumlah: map['jumlah'],
       total: map['total'],
       tanggal: map['tanggal'],
-      namaPelanggan: map['nama_pelanggan'], // 🆕 Tambahan
+      namaPelanggan: map['nama_pelanggan'],
     );
   }
 }

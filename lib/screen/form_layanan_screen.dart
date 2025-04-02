@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart'; // <-- Tambahkan ini
+import 'package:intl/intl.dart';
 import '../db/db_helper.dart';
 import '../models/layanan_laundry.dart';
 
@@ -55,7 +55,7 @@ class _FormLayananScreenState extends State<FormLayananScreen> {
       print("DATA YANG AKAN DISIMPAN:");
       print(layanan.toMap());
 
-      await DBHelper.insertLayanan(layanan);
+      await DBHelper().insertLayanan(layanan);
       Navigator.pop(context, true);
     }
   }
@@ -85,20 +85,27 @@ class _FormLayananScreenState extends State<FormLayananScreen> {
                 decoration: InputDecoration(labelText: "Nama Layanan"),
                 validator:
                     (value) =>
-                        value!.isEmpty ? "Nama tidak boleh kosong" : null,
+                        value == null || value.isEmpty
+                            ? "Nama tidak boleh kosong"
+                            : null,
               ),
               SizedBox(height: 12),
-
               TextFormField(
                 controller: _hargaController,
                 keyboardType: TextInputType.number,
                 decoration: InputDecoration(labelText: "Harga"),
-                validator:
-                    (value) =>
-                        value!.isEmpty ? "Harga tidak boleh kosong" : null,
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return "Harga tidak boleh kosong";
+                  }
+                  final cleaned = value.replaceAll('.', '');
+                  if (int.tryParse(cleaned) == null) {
+                    return "Harga harus berupa angka";
+                  }
+                  return null;
+                },
               ),
               SizedBox(height: 12),
-
               DropdownButtonFormField<String>(
                 value: _kategoriTerpilih,
                 decoration: InputDecoration(labelText: "Kategori"),
@@ -113,7 +120,6 @@ class _FormLayananScreenState extends State<FormLayananScreen> {
                 validator: (value) => value == null ? "Pilih kategori" : null,
               ),
               SizedBox(height: 12),
-
               DropdownButtonFormField<String>(
                 value: _satuanTerpilih,
                 decoration: InputDecoration(labelText: "Satuan"),
@@ -128,7 +134,6 @@ class _FormLayananScreenState extends State<FormLayananScreen> {
                 validator: (value) => value == null ? "Pilih satuan" : null,
               ),
               SizedBox(height: 24),
-
               ElevatedButton(
                 onPressed: _simpanData,
                 style: ElevatedButton.styleFrom(

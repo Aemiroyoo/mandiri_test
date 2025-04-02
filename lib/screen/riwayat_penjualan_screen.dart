@@ -1,9 +1,11 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
-import 'package:mandiri_test/models/layanan_laundry.dart';
-import 'package:mandiri_test/screen/input_penjualan_screen.dart';
-import '../db/db_helper.dart';
-import '../models/penjualan.dart';
 import 'package:intl/intl.dart';
+import 'package:mandiri_test/services/firestore_service.dart';
+import '../db/db_helper.dart';
+import '../models/layanan_laundry.dart';
+import '../models/penjualan.dart';
+import 'input_penjualan_screen.dart';
 
 class RiwayatPenjualanScreen extends StatefulWidget {
   @override
@@ -24,21 +26,47 @@ class _RiwayatPenjualanScreenState extends State<RiwayatPenjualanScreen> {
   void initState() {
     super.initState();
     fetchPenjualan();
-    loadLayanan(); // tambahkan ini
+    loadLayanan();
   }
 
   Future<void> loadLayanan() async {
-    semuaLayanan = await DBHelper.getAllLayanan();
+    semuaLayanan = await DBHelper().getAllLayanan();
     listKategori = semuaLayanan.map((e) => e.kategori).toSet().toList();
     setState(() {});
   }
 
+  // Future<void> fetchPenjualan() async {
+  //   dataPenjualan = await DBHelper.getAllPenjualan();
+  //   setState(() {});
+  // }
+
   Future<void> fetchPenjualan() async {
-    dataPenjualan = await DBHelper.getAllPenjualan();
+    final snapshot =
+        await FirebaseFirestore.instance
+            .collection('penjualan')
+            .orderBy('tanggal', descending: true)
+            .get();
+
+    dataPenjualan =
+        snapshot.docs.map((doc) {
+          final data = doc.data();
+          return Penjualan(
+            id: doc.id, // gunakan ID dokumen sebagai ID unik
+            layananId: data['layananId'],
+            namaLayanan: data['namaLayanan'],
+            hargaSatuan: data['hargaSatuan'],
+            satuan: data['satuan'],
+            jumlah: data['jumlah'],
+            total: data['total'],
+            tanggal: data['tanggal'],
+            namaPelanggan: data['namaPelanggan'],
+          );
+        }).toList();
+
     setState(() {});
   }
 
-  void showDeleteConfirmation(int id) {
+  void showDeleteConfirmation(String id) {
     showDialog(
       context: context,
       builder:
@@ -53,9 +81,11 @@ class _RiwayatPenjualanScreenState extends State<RiwayatPenjualanScreen> {
               ElevatedButton(
                 child: Text("Hapus"),
                 onPressed: () async {
-                  await DBHelper.deletePenjualanById(id);
                   Navigator.pop(context);
-                  fetchPenjualan(); // refresh
+                  await DBHelper.deletePenjualanById(id);
+                  // await FirestoreService.deletePenjualan(id);
+
+                  fetchPenjualan();
                 },
               ),
             ],
@@ -63,166 +93,167 @@ class _RiwayatPenjualanScreenState extends State<RiwayatPenjualanScreen> {
     );
   }
 
-  void showEditDialog(Penjualan data) {
+  void showEditDialog(Penjualan data) async {
     final namaController = TextEditingController(text: data.namaPelanggan);
     final jumlahController = TextEditingController(
       text: data.jumlah.toString(),
     );
 
-    // Simpan kategori dan layanan terpilih dalam variabel state dialog
     String? kategoriTerpilih;
     LayananLaundry? layananTerpilih;
     List<LayananLaundry> layananFiltered = [];
 
-    // Ambil semua data layanan dan kategori terlebih dahulu
-    DBHelper.getAllLayanan().then((layananList) {
-      // Ambil kategori dari semua layanan
-      List<String> listKategori =
-          layananList.map((e) => e.kategori).toSet().toList();
+    final dbHelper = DBHelper();
+    final semuaLayanan = await dbHelper.getAllLayanan();
 
-      // Cari layanan yang sesuai dengan data penjualan
-      LayananLaundry? currentLayanan;
-      try {
-        currentLayanan = layananList.firstWhere(
-          (item) => item.id == data.layananId,
-        );
-        kategoriTerpilih = currentLayanan.kategori;
-        layananTerpilih = currentLayanan;
-        // Filter layanan berdasarkan kategori yang dipilih
-        layananFiltered =
-            layananList.where((e) => e.kategori == kategoriTerpilih).toList();
-      } catch (e) {
-        print("Layanan dengan ID ${data.layananId} tidak ditemukan: $e");
-      }
+    final listKategori = semuaLayanan.map((e) => e.kategori).toSet().toList();
 
-      // Gunakan StatefulBuilder untuk dialog agar setState bekerja dengan baik
-      showDialog(
-        context: context,
-        builder:
-            (context) => StatefulBuilder(
-              builder:
-                  (context, setDialogState) => AlertDialog(
-                    title: Text("Edit Transaksi"),
-                    content: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        TextFormField(
-                          controller: namaController,
-                          decoration: InputDecoration(
-                            labelText: "Nama Pelanggan",
-                          ),
+    try {
+      final currentLayanan = semuaLayanan.firstWhere(
+        (e) => e.id == data.layananId,
+      );
+      kategoriTerpilih = currentLayanan.kategori;
+      layananTerpilih = currentLayanan;
+      layananFiltered =
+          semuaLayanan.where((e) => e.kategori == kategoriTerpilih).toList();
+    } catch (e) {
+      print("Layanan tidak ditemukan: $e");
+    }
+
+    showDialog(
+      context: context,
+      builder:
+          (context) => StatefulBuilder(
+            builder: (context, setDialogState) {
+              return AlertDialog(
+                title: Text("Edit Transaksi"),
+                content: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      TextFormField(
+                        controller: namaController,
+                        decoration: InputDecoration(
+                          labelText: "Nama Pelanggan",
                         ),
-                        SizedBox(height: 8),
-                        TextFormField(
-                          controller: jumlahController,
-                          keyboardType: TextInputType.number,
-                          decoration: InputDecoration(
-                            labelText: "Jumlah (${data.satuan})",
-                          ),
-                        ),
-                        SizedBox(height: 8),
-                        DropdownButtonFormField<String>(
-                          value: kategoriTerpilih,
-                          hint: Text("Pilih Kategori"),
-                          onChanged: (val) {
-                            setDialogState(() {
-                              kategoriTerpilih = val;
-                              // Filter layanan berdasarkan kategori yang dipilih
-                              layananFiltered =
-                                  layananList
-                                      .where(
-                                        (e) => e.kategori == kategoriTerpilih,
-                                      )
-                                      .toList();
-                              // Reset layanan terpilih saat kategori berubah
-                              layananTerpilih =
-                                  layananFiltered.isNotEmpty
-                                      ? layananFiltered[0]
-                                      : null;
-                            });
-                          },
-                          items:
-                              listKategori.map((kategori) {
-                                return DropdownMenuItem(
-                                  value: kategori,
-                                  child: Text(kategori),
-                                );
-                              }).toList(),
-                          decoration: InputDecoration(labelText: "Kategori"),
-                        ),
-                        SizedBox(height: 8),
-                        DropdownButtonFormField<LayananLaundry>(
-                          value: layananTerpilih,
-                          onChanged: (LayananLaundry? value) {
-                            setState(() {
-                              layananTerpilih = value;
-                            });
-                          },
-                          items:
-                              layananFiltered.map((e) {
-                                return DropdownMenuItem(
-                                  value: e,
-                                  child: Container(
-                                    width:
-                                        230, // atur lebar tetap agar wrap aktif (boleh sesuaikan)
-                                    child: Text(
-                                      "${e.namaLayanan} - Rp ${e.harga}/${e.satuan}",
-                                      overflow:
-                                          TextOverflow
-                                              .ellipsis, // potong rapi dengan titik-titik
-                                      softWrap: false,
-                                    ),
-                                  ),
-                                );
-                              }).toList(),
-                          decoration: InputDecoration(labelText: "Layanan"),
-                        ),
-                      ],
-                    ),
-                    actions: [
-                      TextButton(
-                        child: Text("Batal"),
-                        onPressed: () => Navigator.pop(context),
                       ),
-                      ElevatedButton(
-                        child: Text("Simpan"),
-                        onPressed: () async {
-                          if (layananTerpilih == null) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text("Pilih layanan terlebih dahulu"),
-                              ),
-                            );
-                            return;
-                          }
-
-                          final updated = Penjualan(
-                            id: data.id,
-                            layananId: layananTerpilih!.id!,
-                            namaLayanan: layananTerpilih!.namaLayanan,
-                            hargaSatuan: layananTerpilih!.harga,
-                            satuan: layananTerpilih!.satuan,
-                            jumlah:
-                                int.tryParse(jumlahController.text) ??
-                                data.jumlah,
-                            total:
-                                (int.tryParse(jumlahController.text) ??
-                                    data.jumlah) *
-                                layananTerpilih!.harga,
-                            tanggal: data.tanggal,
-                            namaPelanggan: namaController.text,
-                          );
-
-                          await DBHelper.updatePenjualan(updated);
-                          Navigator.pop(context);
-                          fetchPenjualan();
+                      SizedBox(height: 8),
+                      TextFormField(
+                        controller: jumlahController,
+                        keyboardType: TextInputType.number,
+                        decoration: InputDecoration(
+                          labelText:
+                              "Jumlah (${layananTerpilih?.satuan ?? '-'})",
+                        ),
+                      ),
+                      SizedBox(height: 8),
+                      DropdownButtonFormField<String>(
+                        value: kategoriTerpilih,
+                        decoration: InputDecoration(labelText: "Kategori"),
+                        items:
+                            listKategori.map((kategori) {
+                              return DropdownMenuItem(
+                                value: kategori,
+                                child: Text(kategori),
+                              );
+                            }).toList(),
+                        onChanged: (val) {
+                          setDialogState(() {
+                            kategoriTerpilih = val;
+                            layananFiltered =
+                                semuaLayanan
+                                    .where((e) => e.kategori == val)
+                                    .toList();
+                            layananTerpilih =
+                                layananFiltered.isNotEmpty
+                                    ? layananFiltered[0]
+                                    : null;
+                          });
                         },
+                      ),
+                      SizedBox(height: 8),
+                      DropdownButtonFormField<LayananLaundry>(
+                        value: layananTerpilih,
+                        decoration: InputDecoration(labelText: "Layanan"),
+                        items:
+                            layananFiltered.map((e) {
+                              return DropdownMenuItem(
+                                value: e,
+                                child: Container(
+                                  width:
+                                      220, // ⬅️ atur lebar sesuai kebutuhan layout kamu
+                                  child: Text(
+                                    "${e.namaLayanan} - Rp ${e.harga}/${e.satuan}",
+                                    overflow:
+                                        TextOverflow
+                                            .ellipsis, // ⬅️ potong jadi ...
+                                    softWrap: false,
+                                    maxLines: 1, // ⬅️ biar lebih aman
+                                    style: TextStyle(fontSize: 15),
+                                  ),
+                                ),
+                              );
+                            }).toList(),
+                        onChanged:
+                            (val) =>
+                                setDialogState(() => layananTerpilih = val),
                       ),
                     ],
                   ),
-            ),
-      );
-    });
+                ),
+                actions: [
+                  TextButton(
+                    child: Text("Batal"),
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                  ElevatedButton(
+                    child: Text("Simpan"),
+                    onPressed: () async {
+                      if (layananTerpilih == null) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text("Pilih layanan terlebih dahulu"),
+                          ),
+                        );
+                        return;
+                      }
+
+                      final updatedData = {
+                        'layananId': layananTerpilih!.id,
+                        'namaLayanan': layananTerpilih!.namaLayanan,
+                        'hargaSatuan': layananTerpilih!.harga,
+                        'satuan': layananTerpilih!.satuan,
+                        'jumlah':
+                            int.tryParse(jumlahController.text) ?? data.jumlah,
+                        'total':
+                            (int.tryParse(jumlahController.text) ??
+                                data.jumlah) *
+                            layananTerpilih!.harga,
+                        'namaPelanggan': namaController.text,
+                        'tanggal': data.tanggal, // tetap gunakan tanggal lama
+                      };
+
+                      await FirebaseFirestore.instance
+                          .collection('penjualan')
+                          .doc(data.id) // ← ID dokumen
+                          .update(updatedData);
+
+                      Navigator.pop(context);
+                      fetchPenjualan();
+
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text("Data berhasil diperbarui"),
+                          backgroundColor: Colors.green,
+                        ),
+                      );
+                    },
+                  ),
+                ],
+              );
+            },
+          ),
+    );
   }
 
   @override
@@ -243,7 +274,6 @@ class _RiwayatPenjualanScreenState extends State<RiwayatPenjualanScreen> {
           ),
         ],
       ),
-
       body:
           dataPenjualan.isEmpty
               ? Center(child: Text("Belum ada data penjualan."))
@@ -262,7 +292,6 @@ class _RiwayatPenjualanScreenState extends State<RiwayatPenjualanScreen> {
                       child: Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          // Bagian kiri (nama, layanan, tanggal)
                           Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
@@ -282,19 +311,16 @@ class _RiwayatPenjualanScreenState extends State<RiwayatPenjualanScreen> {
                               ],
                             ),
                           ),
-
-                          // Bagian kanan (total + edit/hapus)
                           Column(
                             crossAxisAlignment: CrossAxisAlignment.end,
                             children: [
                               Text(
-                                "${_formatCurrency.format(item.total)}",
+                                _formatCurrency.format(item.total),
                                 style: TextStyle(
                                   fontWeight: FontWeight.bold,
                                   fontSize: 16,
                                 ),
                               ),
-
                               Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [

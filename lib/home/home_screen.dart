@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
@@ -21,22 +22,69 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
+    fetchDataChart();
     loadMonthlyData();
   }
 
   Future<void> loadMonthlyData() async {
     final now = DateTime.now();
-    final bulanIni = DateFormat('yyyy-MM').format(now); // contoh: 2025-03
+    final bulanIni = DateFormat('yyyy-MM').format(now); // contoh: 2025-04
 
-    List<Penjualan> semua = await DBHelper.getAllPenjualan();
+    try {
+      final snapshot =
+          await FirebaseFirestore.instance.collection('penjualan').get();
 
-    final dataBulanIni =
-        semua.where((e) => e.tanggal.startsWith(bulanIni)).toList();
+      final List<Penjualan> semuaData =
+          snapshot.docs.map((doc) {
+            final data = doc.data();
+            return Penjualan(
+              id: doc.id,
+              layananId: data['layananId'],
+              namaLayanan: data['namaLayanan'],
+              hargaSatuan: data['hargaSatuan'],
+              satuan: data['satuan'],
+              jumlah: data['jumlah'],
+              total: data['total'],
+              tanggal: data['tanggal'],
+              namaPelanggan: data['namaPelanggan'],
+            );
+          }).toList();
 
-    totalPemasukan = dataBulanIni.fold(0, (total, item) => total + item.total);
-    totalOrder = dataBulanIni.length;
+      final dataBulanIni =
+          semuaData.where((e) => e.tanggal.startsWith(bulanIni)).toList();
 
-    setState(() {});
+      totalPemasukan = dataBulanIni.fold(0, (sum, item) => sum + item.total);
+      totalOrder = dataBulanIni.length;
+
+      setState(() {});
+    } catch (e) {
+      print("Gagal memuat data dari Firestore: $e");
+    }
+  }
+
+  Map<int, double> dataHarian = {};
+  String selectedBulan = DateFormat('yyyy-MM').format(DateTime.now());
+  List<String> bulanList = [];
+
+  Future<void> fetchDataChart() async {
+    final snapshot =
+        await FirebaseFirestore.instance
+            .collection('penjualan')
+            .where('tanggal', isGreaterThanOrEqualTo: '$selectedBulan-01')
+            .where('tanggal', isLessThanOrEqualTo: '$selectedBulan-31')
+            .get();
+
+    Map<int, double> mapData = {};
+    for (var doc in snapshot.docs) {
+      final tanggal = doc['tanggal'];
+      final total = (doc['total'] ?? 0).toDouble();
+      final hari = int.parse(tanggal.split('-')[2]);
+      mapData.update(hari, (value) => value + total, ifAbsent: () => total);
+    }
+
+    setState(() {
+      dataHarian = mapData;
+    });
   }
 
   // class HomeScreen extends StatelessWidget {
@@ -172,71 +220,125 @@ class _HomeScreenState extends State<HomeScreen> {
                 ],
               ),
               SizedBox(height: 26),
-
-              // Grafik Penjualan
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              Row(
                 children: [
-                  SizedBox(
-                    height: 150,
-                    child: LineChart(
-                      LineChartData(
-                        lineBarsData: [
-                          LineChartBarData(
-                            spots: [
-                              FlSpot(0, 20),
-                              FlSpot(1, 25),
-                              FlSpot(2, 30),
-                              FlSpot(3, 45),
-                              FlSpot(4, 60),
-                              FlSpot(5, 50),
-                            ],
-                            isCurved: true,
-                            barWidth: 3,
-                            color: Colors.blue,
-                            dotData: FlDotData(show: false),
-                          ),
-                        ],
-                        titlesData: FlTitlesData(
-                          leftTitles: AxisTitles(
-                            sideTitles: SideTitles(showTitles: false),
-                          ),
-                          rightTitles: AxisTitles(
-                            sideTitles: SideTitles(showTitles: false),
-                          ),
-                          topTitles: AxisTitles(
-                            sideTitles: SideTitles(showTitles: false),
-                          ),
-                          bottomTitles: AxisTitles(
-                            sideTitles: SideTitles(
-                              showTitles: true,
-                              getTitlesWidget: (value, meta) {
-                                const months = [
-                                  'Jan',
-                                  'Feb',
-                                  'Mar',
-                                  'Apr',
-                                  'Mei',
-                                  'Jun',
-                                ];
-                                return Text(months[value.toInt()]);
-                              },
-                              reservedSize: 30,
-                            ),
-                          ),
+                  Text("Pilih Bulan:"),
+                  SizedBox(width: 10),
+                  DropdownButton<String>(
+                    value: selectedBulan,
+                    items: List.generate(12, (index) {
+                      final date = DateTime(DateTime.now().year, index + 1);
+                      final label = DateFormat('yyyy-MM').format(date);
+                      return DropdownMenuItem(
+                        value: label,
+                        child: Text(
+                          DateFormat('MMMM yyyy', 'id_ID').format(date),
                         ),
-                        borderData: FlBorderData(show: false),
-                        gridData: FlGridData(show: false),
-                      ),
-                    ),
-                  ),
-                  SizedBox(height: 8),
-                  Text(
-                    "• Grafik Penjualan",
-                    style: TextStyle(color: Colors.blue),
+                      );
+                    }),
+                    onChanged: (value) {
+                      if (value != null) {
+                        setState(() {
+                          selectedBulan = value;
+                        });
+                        fetchDataChart();
+                      }
+                    },
                   ),
                 ],
               ),
+
+              // Grafik Penjualan
+              SizedBox(
+                height: 250,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                  ), // 👉 beri jarak kiri-kanan
+                  child: LineChart(
+                    LineChartData(
+                      // minY: 0,
+                      maxY: 500000, // optional, bisa dihitung dari data
+                      minX: 1,
+                      maxX: 30,
+                      titlesData: FlTitlesData(
+                        show: true,
+                        bottomTitles: AxisTitles(
+                          sideTitles: SideTitles(
+                            showTitles: true,
+                            interval: 2,
+                            reservedSize: 32,
+                            getTitlesWidget: (value, meta) {
+                              return SideTitleWidget(
+                                // axisSide: meta.axisSide,
+                                space: 6,
+                                meta: meta,
+                                child: Transform.rotate(
+                                  angle:
+                                      -0.9, // lebih miring agar lebih hemat ruang
+                                  child: Text(
+                                    "${value.toInt()}",
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      color: Colors.black54,
+                                      fontWeight: FontWeight.w800,
+                                    ),
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                        leftTitles: AxisTitles(
+                          sideTitles: SideTitles(
+                            showTitles: true,
+                            reservedSize: 40,
+                            getTitlesWidget: (value, meta) {
+                              return Text(
+                                "${NumberFormat.compact().format(value)}",
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: Colors.black54,
+                                  fontWeight: FontWeight.w800,
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                        topTitles: AxisTitles(
+                          sideTitles: SideTitles(showTitles: false),
+                        ),
+                        rightTitles: AxisTitles(
+                          sideTitles: SideTitles(showTitles: false),
+                        ),
+                      ),
+
+                      // ✅ Tambahkan padding/space agar tidak nubruk
+                      lineTouchData: LineTouchData(enabled: false),
+                      clipData: FlClipData.none(),
+                      gridData: FlGridData(show: false),
+                      borderData: FlBorderData(show: true),
+                      // 👉 Ini penting untuk beri spasi kiri-kanan
+                      extraLinesData: ExtraLinesData(),
+                      minY: 0,
+                      lineBarsData: [
+                        LineChartBarData(
+                          spots: List.generate(30, (i) {
+                            final day = i + 1;
+                            return FlSpot(day.toDouble(), dataHarian[day] ?? 0);
+                          }),
+                          isCurved:
+                              false, // ⬅️ Ini yang bikin garis jadi lurus, bukan lengkung ekstrem
+                          dotData: FlDotData(show: false),
+                          barWidth: 2,
+                          color: Colors.blue,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+
               // SizedBox(height: 24),
 
               // Menu Data Penjualan

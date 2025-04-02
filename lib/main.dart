@@ -1,6 +1,8 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
+import 'package:intl/date_symbol_data_local.dart';
+// import 'package:intl/date_symbol_data_file.dart';
 import 'package:mandiri_test/screen/daftar_harga_screen.dart';
 import 'package:mandiri_test/screen/input_penjualan_screen.dart';
 import 'package:mandiri_test/screen/laporan_penjualan_screen.dart';
@@ -11,8 +13,8 @@ import 'package:mandiri_test/home/home_screen.dart'; // tambahkan ini kalau belu
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
+  await initializeDateFormatting('id_ID'); // ✅ yang benar
 
-  // Cek user yang sedang login
   final currentUser = FirebaseAuth.instance.currentUser;
 
   runApp(MyApp(isLoggedIn: currentUser != null));
