@@ -20,8 +20,8 @@ class _HomeScreenState extends State<HomeScreen> {
   int totalOrder = 0;
 
   @override
-  void initState() {
-    super.initState();
+  void didChangeDependencies() {
+    super.didChangeDependencies();
     fetchDataChart();
     loadMonthlyData();
   }
@@ -258,16 +258,16 @@ class _HomeScreenState extends State<HomeScreen> {
                   child: LineChart(
                     LineChartData(
                       // minY: 0,
-                      maxY: 500000, // optional, bisa dihitung dari data
-                      minX: 1,
-                      maxX: 30,
+                      maxY: 600000, // optional, bisa dihitung dari data
+                      minX: 1, // batas kiri grafik
+                      maxX: 30, // batas kanan grafik
                       titlesData: FlTitlesData(
                         show: true,
                         bottomTitles: AxisTitles(
                           sideTitles: SideTitles(
                             showTitles: true,
-                            interval: 2,
-                            reservedSize: 32,
+                            interval: 2, // interval 2 hari
+                            reservedSize: 32, // space untuk judul bawah
                             getTitlesWidget: (value, meta) {
                               return SideTitleWidget(
                                 // axisSide: meta.axisSide,
@@ -292,7 +292,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         leftTitles: AxisTitles(
                           sideTitles: SideTitles(
                             showTitles: true,
-                            reservedSize: 40,
+                            reservedSize: 35, // space untuk judul kiri
                             getTitlesWidget: (value, meta) {
                               return Text(
                                 "${NumberFormat.compact().format(value)}",
@@ -373,7 +373,10 @@ class _HomeScreenState extends State<HomeScreen> {
                     ); // misalnya ini screen daftar harga
                   }),
                   menuButton1("Input Penjualan", () {
-                    Navigator.pushNamed(context, '/input-penjualan');
+                    Navigator.pushNamed(context, '/input-penjualan').then((_) {
+                      fetchDataChart();
+                      loadMonthlyData();
+                    });
                   }),
                   menuButton1("Riwayat Penjualan", () {
                     Navigator.pushNamed(

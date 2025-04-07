@@ -49,11 +49,29 @@ class _InputPenjualanScreenState extends State<InputPenjualanScreen> {
   Future<void> simpanPenjualan() async {
     if (namaPelangganController.text.isEmpty ||
         layananTerpilih == null ||
-        jumlahController.text.isEmpty) {
+        jumlahController.text.isEmpty ||
+        int.tryParse(jumlahController.text) == null ||
+        int.tryParse(jumlahController.text)! <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Lengkapi semua data terlebih dahulu")),
+        SnackBar(
+          content: Text("Isi jumlah minimal 1 dan pastikan semua data terisi."),
+          backgroundColor: Colors.red,
+        ),
       );
       return;
+    }
+
+    String _capitalizeEachWord(String text) {
+      return text
+          .toLowerCase()
+          .split(' ')
+          .map(
+            (word) =>
+                word.isNotEmpty
+                    ? word[0].toUpperCase() + word.substring(1)
+                    : '',
+          )
+          .join(' ');
     }
 
     final penjualan = Penjualan(
@@ -64,7 +82,7 @@ class _InputPenjualanScreenState extends State<InputPenjualanScreen> {
       jumlah: int.parse(jumlahController.text),
       total: totalHarga,
       tanggal: DateTime.now().toIso8601String().substring(0, 10),
-      namaPelanggan: namaPelangganController.text,
+      namaPelanggan: _capitalizeEachWord(namaPelangganController.text),
     );
 
     // await DBHelper.insertPenjualan(penjualan);

@@ -21,6 +21,9 @@ class _RiwayatPenjualanScreenState extends State<RiwayatPenjualanScreen> {
   List<Penjualan> dataPenjualan = [];
   List<LayananLaundry> semuaLayanan = [];
   List<String> listKategori = [];
+  DocumentSnapshot? lastDocument;
+  bool hasMore = true;
+  bool isLoading = false;
 
   @override
   void initState() {
@@ -35,35 +38,50 @@ class _RiwayatPenjualanScreenState extends State<RiwayatPenjualanScreen> {
     setState(() {});
   }
 
-  // Future<void> fetchPenjualan() async {
-  //   dataPenjualan = await DBHelper.getAllPenjualan();
-  //   setState(() {});
-  // }
-
   Future<void> fetchPenjualan() async {
+    if (isLoading || !hasMore) return;
+
+    setState(() => isLoading = true);
+
+    final query = FirebaseFirestore.instance
+        .collection('penjualan')
+        .orderBy('tanggal', descending: true)
+        .limit(10);
+
     final snapshot =
-        await FirebaseFirestore.instance
-            .collection('penjualan')
-            .orderBy('tanggal', descending: true)
-            .get();
+        lastDocument != null
+            ? await query.startAfterDocument(lastDocument!).get()
+            : await query.get();
 
-    dataPenjualan =
-        snapshot.docs.map((doc) {
-          final data = doc.data();
-          return Penjualan(
-            id: doc.id, // gunakan ID dokumen sebagai ID unik
-            layananId: data['layananId'],
-            namaLayanan: data['namaLayanan'],
-            hargaSatuan: data['hargaSatuan'],
-            satuan: data['satuan'],
-            jumlah: data['jumlah'],
-            total: data['total'],
-            tanggal: data['tanggal'],
-            namaPelanggan: data['namaPelanggan'],
-          );
-        }).toList();
+    final docs = snapshot.docs;
 
-    setState(() {});
+    if (docs.isNotEmpty) {
+      lastDocument = docs.last;
+      final items =
+          docs.map((doc) {
+            final data = doc.data();
+            return Penjualan(
+              id: doc.id,
+              layananId: data['layananId'],
+              namaLayanan: data['namaLayanan'],
+              hargaSatuan: data['hargaSatuan'],
+              satuan: data['satuan'],
+              jumlah: data['jumlah'],
+              total: data['total'],
+              tanggal: data['tanggal'],
+              namaPelanggan: data['namaPelanggan'],
+            );
+          }).toList();
+
+      setState(() {
+        dataPenjualan.addAll(items);
+        if (items.length < 10) hasMore = false;
+      });
+    } else {
+      setState(() => hasMore = false);
+    }
+
+    setState(() => isLoading = false);
   }
 
   void showDeleteConfirmation(String id) {
@@ -268,88 +286,105 @@ class _RiwayatPenjualanScreenState extends State<RiwayatPenjualanScreen> {
             onPressed: () {
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (context) => InputPenjualanScreen()),
+                MaterialPageRoute(builder: (_) => InputPenjualanScreen()),
               );
             },
           ),
         ],
       ),
       body:
-          dataPenjualan.isEmpty
+          dataPenjualan.isEmpty && !isLoading
               ? Center(child: Text("Belum ada data penjualan."))
               : ListView.builder(
-                itemCount: dataPenjualan.length,
+                itemCount: dataPenjualan.length + (hasMore ? 1 : 0),
                 itemBuilder: (context, index) {
-                  final item = dataPenjualan[index];
-                  return Card(
-                    margin: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    elevation: 2,
-                    child: Padding(
-                      padding: const EdgeInsets.all(12),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
+                  if (index < dataPenjualan.length) {
+                    final item = dataPenjualan[index];
+                    return Card(
+                      margin: EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 10,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      elevation: 2,
+                      child: Padding(
+                        padding: const EdgeInsets.all(12),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    item.namaPelanggan,
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 16,
+                                    ),
+                                  ),
+                                  SizedBox(height: 4),
+                                  Text(
+                                    "${item.namaLayanan} - ${item.jumlah} ${item.satuan}",
+                                  ),
+                                  Text("Tanggal: ${item.tanggal}"),
+                                ],
+                              ),
+                            ),
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.end,
                               children: [
                                 Text(
-                                  item.namaPelanggan,
+                                  _formatCurrency.format(item.total),
                                   style: TextStyle(
                                     fontWeight: FontWeight.bold,
                                     fontSize: 16,
                                   ),
                                 ),
-                                SizedBox(height: 4),
-                                Text(
-                                  "${item.namaLayanan} - ${item.jumlah} ${item.satuan}",
+                                Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    IconButton(
+                                      icon: Icon(Icons.edit, size: 18),
+                                      padding: EdgeInsets.zero,
+                                      constraints: BoxConstraints(),
+                                      onPressed: () => showEditDialog(item),
+                                    ),
+                                    SizedBox(width: 4),
+                                    IconButton(
+                                      icon: Icon(
+                                        Icons.delete,
+                                        size: 18,
+                                        color: Colors.red,
+                                      ),
+                                      padding: EdgeInsets.zero,
+                                      constraints: BoxConstraints(),
+                                      onPressed:
+                                          () =>
+                                              showDeleteConfirmation(item.id!),
+                                    ),
+                                  ],
                                 ),
-                                Text("Tanggal: ${item.tanggal}"),
                               ],
                             ),
-                          ),
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.end,
-                            children: [
-                              Text(
-                                _formatCurrency.format(item.total),
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 16,
-                                ),
-                              ),
-                              Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  IconButton(
-                                    icon: Icon(Icons.edit, size: 18),
-                                    padding: EdgeInsets.zero,
-                                    constraints: BoxConstraints(),
-                                    onPressed: () => showEditDialog(item),
-                                  ),
-                                  SizedBox(width: 4),
-                                  IconButton(
-                                    icon: Icon(
-                                      Icons.delete,
-                                      size: 18,
-                                      color: Colors.red,
-                                    ),
-                                    padding: EdgeInsets.zero,
-                                    constraints: BoxConstraints(),
-                                    onPressed:
-                                        () => showDeleteConfirmation(item.id!),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
-                    ),
-                  );
+                    );
+                  } else {
+                    // Tombol Muat Lebih Banyak
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      child: Center(
+                        child: ElevatedButton(
+                          onPressed: fetchPenjualan,
+                          child: Text("Muat Lebih Banyak"),
+                        ),
+                      ),
+                    );
+                  }
                 },
               ),
     );
