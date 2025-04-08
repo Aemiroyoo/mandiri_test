@@ -17,7 +17,7 @@ class _FormLayananScreenState extends State<FormLayananScreen> {
   String? _satuanTerpilih;
 
   final List<String> _kategoriList = ["Kiloan", "Satuan", "Boneka", "Sepatu"];
-  final List<String> _satuanList = ["kg", "item", "pasang"];
+  final List<String> _satuanList = ["kg", "item", "pasang", "m", "cm"];
 
   final formatCurrency = NumberFormat('#,###', 'id_ID');
 

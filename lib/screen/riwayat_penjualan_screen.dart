@@ -84,6 +84,19 @@ class _RiwayatPenjualanScreenState extends State<RiwayatPenjualanScreen> {
     setState(() => isLoading = false);
   }
 
+  String toTitleCase(String text) {
+    return text
+        .toLowerCase()
+        .split(' ')
+        .map(
+          (word) =>
+              word.isNotEmpty
+                  ? '${word[0].toUpperCase()}${word.substring(1)}'
+                  : '',
+        )
+        .join(' ');
+  }
+
   void showDeleteConfirmation(String id) {
     showDialog(
       context: context,
@@ -247,17 +260,41 @@ class _RiwayatPenjualanScreenState extends State<RiwayatPenjualanScreen> {
                             (int.tryParse(jumlahController.text) ??
                                 data.jumlah) *
                             layananTerpilih!.harga,
-                        'namaPelanggan': namaController.text,
+                        'namaPelanggan': toTitleCase(namaController.text),
                         'tanggal': data.tanggal, // tetap gunakan tanggal lama
                       };
 
                       await FirebaseFirestore.instance
                           .collection('penjualan')
-                          .doc(data.id) // ← ID dokumen
+                          .doc(data.id)
                           .update(updatedData);
 
+                      // ✅ Update data langsung di list lokal
+                      setState(() {
+                        final index = dataPenjualan.indexWhere(
+                          (e) => e.id == data.id,
+                        );
+                        if (index != -1) {
+                          dataPenjualan[index] = Penjualan(
+                            id: data.id,
+                            layananId: layananTerpilih!.id!,
+                            namaLayanan: layananTerpilih!.namaLayanan,
+                            hargaSatuan: layananTerpilih!.harga,
+                            satuan: layananTerpilih!.satuan,
+                            jumlah:
+                                int.tryParse(jumlahController.text) ??
+                                data.jumlah,
+                            total:
+                                (int.tryParse(jumlahController.text) ??
+                                    data.jumlah) *
+                                layananTerpilih!.harga,
+                            tanggal: data.tanggal,
+                            namaPelanggan: toTitleCase(namaController.text),
+                          );
+                        }
+                      });
+
                       Navigator.pop(context);
-                      fetchPenjualan();
 
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(

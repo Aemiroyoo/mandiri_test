@@ -77,7 +77,7 @@ class _DaftarHargaScreenState extends State<DaftarHargaScreen> {
     );
 
     final List<String> kategoriList = ["Kiloan", "Satuan", "Boneka", "Sepatu"];
-    final List<String> satuanList = ["kg", "item", "pasang"];
+    final List<String> satuanList = ["kg", "item", "pasang", "m", "cm"];
 
     String? kategori = layanan.kategori;
     String? satuan = layanan.satuan;

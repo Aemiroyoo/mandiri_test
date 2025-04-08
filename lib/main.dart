@@ -35,7 +35,9 @@ class MyApp extends StatelessWidget {
 
       routes: {
         '/login': (context) => LoginScreen(),
-        '/home': (context) => HomeScreen(),
+        '/home':
+            (context) =>
+                HomeScreen(userRole: 'admin_master'), // contoh sementara
         '/daftar-harga': (context) => DaftarHargaScreen(),
         '/input-penjualan': (context) => InputPenjualanScreen(),
         '/riwayat-penjualan': (context) => RiwayatPenjualanScreen(),
@@ -43,7 +45,10 @@ class MyApp extends StatelessWidget {
       },
 
       // Cek apakah user sudah login
-      home: isLoggedIn ? HomeScreen() : LoginScreen(),
+      home:
+          isLoggedIn
+              ? HomeScreen(userRole: 'admin_master')
+              : LoginScreen(), // sementara
     );
   }
 }

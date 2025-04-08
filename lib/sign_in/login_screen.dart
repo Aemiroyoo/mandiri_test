@@ -3,6 +3,7 @@ import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:mandiri_test/home/home_screen.dart';
 import 'package:mandiri_test/sign_up/signup_screen.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -17,21 +18,52 @@ class _LoginScreenState extends State<LoginScreen> {
   bool isLoading = false;
 
   void signInUser() async {
-    setState(() => isLoading = true);
-    try {
-      await FirebaseAuth.instance.signInWithEmailAndPassword(
-        email: emailController.text.trim(),
-        password: passwordController.text.trim(),
+    final email = emailController.text.trim();
+    final password = passwordController.text.trim();
+
+    // Validasi input kosong
+    if (email.isEmpty || password.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Email dan Password tidak boleh kosong")),
       );
+      return;
+    }
 
-      // ✅ Login berhasil
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text("Login berhasil!")));
+    setState(() => isLoading = true);
 
+    try {
+      // Login ke Firebase Auth
+      final userCredential = await FirebaseAuth.instance
+          .signInWithEmailAndPassword(email: email, password: password);
+
+      final userId = userCredential.user?.uid;
+
+      // Ambil data user dari Firestore berdasarkan UID
+      final userDoc =
+          await FirebaseFirestore.instance
+              .collection('users')
+              .doc(userId)
+              .get();
+
+      if (!userDoc.exists) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Data user tidak ditemukan di Firestore")),
+        );
+        return;
+      }
+
+      final userData = userDoc.data();
+      final userRole =
+          userData?['role'] ?? 'admin_karyawan'; // default kalau null
+
+      // Kirim role ke HomeScreen
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (context) => HomeScreen()),
+        MaterialPageRoute(builder: (context) => HomeScreen(userRole: userRole)),
+      );
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Login berhasil sebagai $userRole")),
       );
     } on FirebaseAuthException catch (e) {
       String message = '';
@@ -46,6 +78,10 @@ class _LoginScreenState extends State<LoginScreen> {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text(message)));
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Terjadi kesalahan: ${e.toString()}")),
+      );
     } finally {
       setState(() => isLoading = false);
     }
@@ -167,19 +203,19 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
               SizedBox(height: 20),
 
-              SocialLoginButton(
-                icon: FontAwesomeIcons.facebook,
-                text: "Sign in with Facebook",
-                color: Colors.blue.shade800,
-                onPressed: () => print("Login with Facebook"),
-              ),
-              SizedBox(height: 10),
-              SocialLoginButton(
-                icon: FontAwesomeIcons.google,
-                text: "Sign in with Gmail",
-                color: Colors.red.shade700,
-                onPressed: () => print("Login with Google"),
-              ),
+              // SocialLoginButton(
+              //   icon: FontAwesomeIcons.facebook,
+              //   text: "Sign in with Facebook",
+              //   color: Colors.blue.shade800,
+              //   onPressed: () => print("Login with Facebook"),
+              // ),
+              // SizedBox(height: 10),
+              // SocialLoginButton(
+              //   icon: FontAwesomeIcons.google,
+              //   text: "Sign in with Gmail",
+              //   color: Colors.red.shade700,
+              //   onPressed: () => print("Login with Google"),
+              // ),
               SizedBox(height: 10),
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,

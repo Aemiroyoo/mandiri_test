@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
@@ -11,53 +12,38 @@ class SignupScreen extends StatefulWidget {
 }
 
 class _SignupScreenState extends State<SignupScreen> {
-  @override
   final TextEditingController emailController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
+  final TextEditingController namaController = TextEditingController();
+  final TextEditingController noTelpController = TextEditingController();
 
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
-      resizeToAvoidBottomInset: false, // untuk menghindari error overflow
-      backgroundColor: Color(0xFF00224F), // Warna dari Figma
+      resizeToAvoidBottomInset: false,
+      backgroundColor: Color(0xFF00224F),
       body: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 22.0),
         child: Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               Align(
                 alignment: Alignment.centerLeft,
                 child: SizedBox(
                   width: 150,
                   child: ListTile(
-                    leading: const Icon(
-                      Icons.arrow_back,
-                      size: 25,
-                      color: Color.fromARGB(255, 255, 255, 255),
-                    ),
-                    title: const Text(
-                      'Back',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: Color.fromARGB(255, 255, 255, 255),
-                      ),
-                    ),
+                    leading: Icon(Icons.arrow_back, color: Colors.white),
+                    title: Text("Back", style: TextStyle(color: Colors.white)),
                     onTap: () {
                       Navigator.pushReplacement(
                         context,
-                        MaterialPageRoute(
-                          builder: (context) {
-                            return LoginScreen();
-                          },
-                        ),
+                        MaterialPageRoute(builder: (_) => LoginScreen()),
                       );
                     },
                   ),
                 ),
               ),
-
               Align(
                 alignment: Alignment.centerLeft,
                 child: Text(
@@ -69,37 +55,44 @@ class _SignupScreenState extends State<SignupScreen> {
                   ),
                 ),
               ),
-              SizedBox(height: 50),
-              // Container(
-              //   width: 250,
-              //   height: 120,
-              //   decoration: BoxDecoration(
-              //     color: Colors.white,
-              //     borderRadius: BorderRadius.circular(20),
-              //   ),
-              //   child: Icon(Icons.person, size: 70, color: Color(0xFF00224F)),
-              // ),
-              SizedBox(height: 20),
-              Text(
-                "Hello, Welcome Back",
-                style: TextStyle(
-                  fontSize: 27,
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              SizedBox(height: 5),
-              Text(
-                "Welcome back, please\nsign in again",
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Colors.white.withOpacity(0.6),
-                ),
-              ),
-              SizedBox(height: 50),
+              SizedBox(height: 30),
 
-              // Input Email
+              // Nama
+              TextField(
+                controller: namaController,
+                style: TextStyle(color: Colors.white),
+                decoration: InputDecoration(
+                  hintText: "Nama Lengkap",
+                  hintStyle: TextStyle(color: Colors.white70),
+                  filled: true,
+                  fillColor: Colors.white10,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: BorderSide.none,
+                  ),
+                ),
+              ),
+              SizedBox(height: 16),
+
+              // Nomor Telepon
+              TextField(
+                controller: noTelpController,
+                keyboardType: TextInputType.phone,
+                style: TextStyle(color: Colors.white),
+                decoration: InputDecoration(
+                  hintText: "Nomor Telepon",
+                  hintStyle: TextStyle(color: Colors.white70),
+                  filled: true,
+                  fillColor: Colors.white10,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: BorderSide.none,
+                  ),
+                ),
+              ),
+              SizedBox(height: 16),
+
+              // Email
               TextField(
                 controller: emailController,
                 style: TextStyle(color: Colors.white),
@@ -116,7 +109,7 @@ class _SignupScreenState extends State<SignupScreen> {
               ),
               SizedBox(height: 16),
 
-              // Input Password
+              // Password
               TextField(
                 controller: passwordController,
                 obscureText: true,
@@ -134,7 +127,7 @@ class _SignupScreenState extends State<SignupScreen> {
               ),
               SizedBox(height: 30),
 
-              // Tombol Login
+              // Tombol Sign Up
               ElevatedButton(
                 onPressed: () async {
                   try {
@@ -144,14 +137,27 @@ class _SignupScreenState extends State<SignupScreen> {
                           password: passwordController.text.trim(),
                         );
 
-                    // Berhasil daftar, bisa arahkan ke halaman login / home
+                    // Simpan data user tambahan ke Firestore
+                    await FirebaseFirestore.instance
+                        .collection('users')
+                        .doc(credential.user!.uid)
+                        .set({
+                          'uid': credential.user!.uid,
+                          'email': credential.user!.email,
+                          'nama': namaController.text.trim(),
+                          'no_telp': noTelpController.text.trim(),
+                          'role':
+                              'admin_karyawan', // default role, bisa diganti 'admin_master' dari panel admin
+                          'created_at': DateTime.now().toIso8601String(),
+                        });
+
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(content: Text("Registrasi berhasil!")),
                     );
 
                     Navigator.pushReplacement(
                       context,
-                      MaterialPageRoute(builder: (context) => LoginScreen()),
+                      MaterialPageRoute(builder: (_) => LoginScreen()),
                     );
                   } on FirebaseAuthException catch (e) {
                     String msg = '';
@@ -184,40 +190,10 @@ class _SignupScreenState extends State<SignupScreen> {
                   ),
                 ),
               ),
-              SizedBox(height: 270),
+              SizedBox(height: 100),
             ],
           ),
         ),
-      ),
-    );
-  }
-}
-
-// Widget Tombol Social Login
-class SocialLoginButton extends StatelessWidget {
-  final IconData icon;
-  final String text;
-  final Color color;
-  final VoidCallback onPressed;
-
-  const SocialLoginButton({
-    super.key,
-    required this.icon,
-    required this.text,
-    required this.color,
-    required this.onPressed,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return ElevatedButton.icon(
-      onPressed: onPressed,
-      icon: FaIcon(icon, color: Colors.white),
-      label: Text(text, style: TextStyle(fontSize: 16, color: Colors.white)),
-      style: ElevatedButton.styleFrom(
-        backgroundColor: color,
-        minimumSize: Size(double.infinity, 50),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       ),
     );
   }
