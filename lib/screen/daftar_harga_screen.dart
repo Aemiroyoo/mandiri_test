@@ -213,7 +213,10 @@ class _DaftarHargaScreenState extends State<DaftarHargaScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Daftar Harga Laundry"),
+        title: const Text(
+          "Daftar Harga Laundry",
+          style: TextStyle(color: Colors.white),
+        ),
         backgroundColor: Colors.blue.shade900,
       ),
       body:

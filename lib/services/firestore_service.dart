@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:mandiri_test/models/penjualan.dart';
 import '../models/layanan_laundry.dart';
+import '../models/penjualan_detail.dart';
 
 class FirestoreService {
   static final _collection = FirebaseFirestore.instance.collection(
@@ -50,11 +51,11 @@ class FirestoreService {
 
   static Future<void> tambahPenjualan(Penjualan penjualan) async {
     await FirebaseFirestore.instance.collection('penjualan').add({
-      'layananId': penjualan.layananId,
-      'namaLayanan': penjualan.namaLayanan,
-      'hargaSatuan': penjualan.hargaSatuan,
-      'satuan': penjualan.satuan,
-      'jumlah': penjualan.jumlah,
+      // 'layananId': penjualan.layananId,
+      // 'namaLayanan': penjualan.namaLayanan,
+      // 'hargaSatuan': penjualan.hargaSatuan,
+      // 'satuan': penjualan.satuan,
+      // 'jumlah': penjualan.jumlah,
       'total': penjualan.total,
       'tanggal': penjualan.tanggal,
       'namaPelanggan': penjualan.namaPelanggan,

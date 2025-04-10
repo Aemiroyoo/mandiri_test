@@ -50,14 +50,10 @@ class _HomeScreenState extends State<HomeScreen> {
             final data = doc.data();
             return Penjualan(
               id: doc.id,
-              layananId: data['layananId'],
-              namaLayanan: data['namaLayanan'],
-              hargaSatuan: data['hargaSatuan'],
-              satuan: data['satuan'],
-              jumlah: data['jumlah'],
               total: data['total'],
               tanggal: data['tanggal'],
               namaPelanggan: data['namaPelanggan'],
+              detail: [],
             );
           }).toList();
 
@@ -350,24 +346,22 @@ class _HomeScreenState extends State<HomeScreen> {
                 spacing: 14,
                 runSpacing: 14,
                 children: [
-                  if (widget.userRole == 'admin_master')
-                    menuButton1(
-                      "Daftar Barang",
-                      () => Navigator.pushNamed(context, '/daftar-harga'),
-                    ),
-                  if (widget.userRole == 'admin_karyawan') ...[
-                    menuButton1("Input Penjualan", () {
-                      Navigator.pushNamed(context, '/input-penjualan').then((
-                        _,
-                      ) {
-                        fetchDataChart();
-                        loadMonthlyData();
-                      });
-                    }),
-                    menuButton1("Riwayat Penjualan", () {
-                      Navigator.pushNamed(context, '/riwayat-penjualan');
-                    }),
-                  ],
+                  // if (widget.userRole == 'admin_master')
+                  menuButton1(
+                    "Daftar Barang",
+                    () => Navigator.pushNamed(context, '/daftar-harga'),
+                  ),
+                  // if (widget.userRole == 'admin_karyawan') ...[
+                  menuButton1("Input Penjualan", () {
+                    Navigator.pushNamed(context, '/input-penjualan').then((_) {
+                      fetchDataChart();
+                      loadMonthlyData();
+                    });
+                  }),
+                  menuButton1("Riwayat Penjualan", () {
+                    Navigator.pushNamed(context, '/riwayat-penjualan');
+                  }),
+                  // ],
                   menuButton1("Laporan Penjualan", () {
                     Navigator.pushNamed(context, '/laporan-penjualan');
                   }),

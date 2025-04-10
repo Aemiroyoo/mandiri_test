@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:mandiri_test/models/penjualan_detail.dart';
 import '../models/penjualan.dart';
 
 class LaporanPenjualanScreen extends StatefulWidget {
@@ -16,7 +17,7 @@ class _LaporanPenjualanScreenState extends State<LaporanPenjualanScreen> {
   List<Penjualan> semuaData = [];
   List<Penjualan> dataTampil = [];
 
-  String selectedFilter = 'Semua';
+  String selectedFilter = 'Hari ini';
   final filterOptions = ['Semua', 'Hari ini', 'Minggu ini', 'Bulan ini'];
 
   @override
@@ -32,23 +33,40 @@ class _LaporanPenjualanScreenState extends State<LaporanPenjualanScreen> {
             .orderBy('tanggal', descending: true)
             .get();
 
-    semuaData =
-        snapshot.docs.map((doc) {
-          final data = doc.data();
-          return Penjualan(
-            id: doc.id,
-            layananId: data['layananId'],
-            namaLayanan: data['namaLayanan'],
-            hargaSatuan: data['hargaSatuan'],
-            satuan: data['satuan'],
-            jumlah: data['jumlah'],
-            total: data['total'],
-            tanggal: data['tanggal'],
-            namaPelanggan: data['namaPelanggan'],
-          );
-        }).toList();
+    semuaData = [];
 
-    _filterData();
+    for (var doc in snapshot.docs) {
+      final data = doc.data();
+      final detailSnapshot = await doc.reference.collection('detail').get();
+
+      final detailList =
+          detailSnapshot.docs.map((d) {
+            final dataDetail = d.data();
+            return PenjualanDetail(
+              id: d.id,
+              penjualanId: doc.id,
+              layananId: dataDetail['layanan_id'],
+              namaLayanan: dataDetail['nama_layanan'],
+              hargaSatuan: dataDetail['harga_satuan'],
+              satuan: dataDetail['satuan'],
+              jumlah: dataDetail['jumlah'],
+              total: dataDetail['total'],
+            );
+          }).toList();
+
+      // ✅ Pindahkan ke dalam setState agar update UI langsung saat selesai load
+      _filterData();
+
+      semuaData.add(
+        Penjualan(
+          id: doc.id,
+          namaPelanggan: data['nama_pelanggan'],
+          tanggal: data['tanggal'],
+          total: data['total'],
+          detail: detailList,
+        ),
+      );
+    }
   }
 
   void _filterData() {
@@ -100,9 +118,10 @@ class _LaporanPenjualanScreenState extends State<LaporanPenjualanScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final currencyFormat = NumberFormat.decimalPattern('id');
     return Scaffold(
       appBar: AppBar(
-        title: Text("Laporan Penjualan"),
+        title: Text("Laporan Penjualan", style: TextStyle(color: Colors.white)),
         backgroundColor: Colors.blue.shade900,
       ),
       body: Padding(
@@ -215,11 +234,31 @@ class _LaporanPenjualanScreenState extends State<LaporanPenjualanScreen> {
                               itemBuilder: (context, index) {
                                 final item = dataTampil[index];
                                 return ListTile(
-                                  title: Text(item.namaPelanggan),
-                                  subtitle: Text(
-                                    "${item.namaLayanan} - ${item.jumlah} ${item.satuan}",
+                                  title: Text(
+                                    item.namaPelanggan,
+                                    style: TextStyle(
+                                      fontSize: 17,
+                                      fontWeight: FontWeight.w700,
+                                    ),
                                   ),
-                                  trailing: Text("Rp. ${item.total},-"),
+                                  subtitle: Text(
+                                    item.detail
+                                        .map(
+                                          (d) =>
+                                              "${d.namaLayanan} - ${d.jumlah} ${d.satuan}",
+                                        )
+                                        .join('\n'),
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                  trailing: Text(
+                                    "Rp. ${currencyFormat.format(item.total)},-",
+                                    style: TextStyle(
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
                                 );
                               },
                             ),

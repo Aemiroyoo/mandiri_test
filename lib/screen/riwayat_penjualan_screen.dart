@@ -1,10 +1,9 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
-import 'package:mandiri_test/services/firestore_service.dart';
-import '../db/db_helper.dart';
-import '../models/layanan_laundry.dart';
+import 'package:mandiri_test/screen/edit_penjualan_screen.dart';
 import '../models/penjualan.dart';
+import '../models/penjualan_detail.dart';
 import 'input_penjualan_screen.dart';
 
 class RiwayatPenjualanScreen extends StatefulWidget {
@@ -13,415 +12,198 @@ class RiwayatPenjualanScreen extends StatefulWidget {
 }
 
 class _RiwayatPenjualanScreenState extends State<RiwayatPenjualanScreen> {
-  final _formatCurrency = NumberFormat.currency(
-    locale: 'id_ID',
-    symbol: 'Rp. ',
-    decimalDigits: 0,
-  );
   List<Penjualan> dataPenjualan = [];
-  List<LayananLaundry> semuaLayanan = [];
-  List<String> listKategori = [];
-  DocumentSnapshot? lastDocument;
-  bool hasMore = true;
-  bool isLoading = false;
 
   @override
   void initState() {
     super.initState();
     fetchPenjualan();
-    loadLayanan();
-  }
-
-  Future<void> loadLayanan() async {
-    semuaLayanan = await DBHelper().getAllLayanan();
-    listKategori = semuaLayanan.map((e) => e.kategori).toSet().toList();
-    setState(() {});
   }
 
   Future<void> fetchPenjualan() async {
-    if (isLoading || !hasMore) return;
+    try {
+      final snapshot =
+          await FirebaseFirestore.instance
+              .collection('penjualan')
+              .orderBy('tanggal', descending: true)
+              .get();
 
-    setState(() => isLoading = true);
+      final List<Penjualan> list = [];
 
-    final query = FirebaseFirestore.instance
-        .collection('penjualan')
-        .orderBy('tanggal', descending: true)
-        .limit(10);
+      for (var doc in snapshot.docs) {
+        final data = doc.data();
+        final List<PenjualanDetail> detailList = [];
 
-    final snapshot =
-        lastDocument != null
-            ? await query.startAfterDocument(lastDocument!).get()
-            : await query.get();
+        try {
+          final detailSnapshot = await doc.reference.collection('detail').get();
+          for (var d in detailSnapshot.docs) {
+            detailList.add(PenjualanDetail.fromMap(d.id, d.data()));
+          }
+        } catch (e) {
+          print("Gagal ambil detail untuk ${doc.id}: $e");
+        }
 
-    final docs = snapshot.docs;
-
-    if (docs.isNotEmpty) {
-      lastDocument = docs.last;
-      final items =
-          docs.map((doc) {
-            final data = doc.data();
-            return Penjualan(
-              id: doc.id,
-              layananId: data['layananId'],
-              namaLayanan: data['namaLayanan'],
-              hargaSatuan: data['hargaSatuan'],
-              satuan: data['satuan'],
-              jumlah: data['jumlah'],
-              total: data['total'],
-              tanggal: data['tanggal'],
-              namaPelanggan: data['namaPelanggan'],
-            );
-          }).toList();
+        list.add(
+          Penjualan(
+            id: doc.id,
+            namaPelanggan: data['nama_pelanggan'] ?? "-",
+            tanggal: data['tanggal'] ?? "-",
+            total: data['total'] ?? 0,
+            detail: detailList,
+          ),
+        );
+      }
 
       setState(() {
-        dataPenjualan.addAll(items);
-        if (items.length < 10) hasMore = false;
+        dataPenjualan = list;
       });
-    } else {
-      setState(() => hasMore = false);
-    }
 
-    setState(() => isLoading = false);
-  }
-
-  String toTitleCase(String text) {
-    return text
-        .toLowerCase()
-        .split(' ')
-        .map(
-          (word) =>
-              word.isNotEmpty
-                  ? '${word[0].toUpperCase()}${word.substring(1)}'
-                  : '',
-        )
-        .join(' ');
-  }
-
-  void showDeleteConfirmation(String id) {
-    showDialog(
-      context: context,
-      builder:
-          (context) => AlertDialog(
-            title: Text("Hapus Transaksi"),
-            content: Text("Yakin ingin menghapus transaksi ini?"),
-            actions: [
-              TextButton(
-                child: Text("Batal"),
-                onPressed: () => Navigator.pop(context),
-              ),
-              ElevatedButton(
-                child: Text("Hapus"),
-                onPressed: () async {
-                  Navigator.pop(context);
-                  await DBHelper.deletePenjualanById(id);
-                  // await FirestoreService.deletePenjualan(id);
-
-                  fetchPenjualan();
-                },
-              ),
-            ],
-          ),
-    );
-  }
-
-  void showEditDialog(Penjualan data) async {
-    final namaController = TextEditingController(text: data.namaPelanggan);
-    final jumlahController = TextEditingController(
-      text: data.jumlah.toString(),
-    );
-
-    String? kategoriTerpilih;
-    LayananLaundry? layananTerpilih;
-    List<LayananLaundry> layananFiltered = [];
-
-    final dbHelper = DBHelper();
-    final semuaLayanan = await dbHelper.getAllLayanan();
-
-    final listKategori = semuaLayanan.map((e) => e.kategori).toSet().toList();
-
-    try {
-      final currentLayanan = semuaLayanan.firstWhere(
-        (e) => e.id == data.layananId,
-      );
-      kategoriTerpilih = currentLayanan.kategori;
-      layananTerpilih = currentLayanan;
-      layananFiltered =
-          semuaLayanan.where((e) => e.kategori == kategoriTerpilih).toList();
+      print("Total transaksi: ${list.length}");
+      for (var p in list) {
+        print("Pelanggan: ${p.namaPelanggan}, layanan: ${p.detail.length}");
+      }
     } catch (e) {
-      print("Layanan tidak ditemukan: $e");
+      print("Gagal ambil data penjualan: $e");
     }
+  }
 
-    showDialog(
-      context: context,
-      builder:
-          (context) => StatefulBuilder(
-            builder: (context, setDialogState) {
-              return AlertDialog(
-                title: Text("Edit Transaksi"),
-                content: SingleChildScrollView(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      TextFormField(
-                        controller: namaController,
-                        decoration: InputDecoration(
-                          labelText: "Nama Pelanggan",
-                        ),
-                      ),
-                      SizedBox(height: 8),
-                      TextFormField(
-                        controller: jumlahController,
-                        keyboardType: TextInputType.number,
-                        decoration: InputDecoration(
-                          labelText:
-                              "Jumlah (${layananTerpilih?.satuan ?? '-'})",
-                        ),
-                      ),
-                      SizedBox(height: 8),
-                      DropdownButtonFormField<String>(
-                        value: kategoriTerpilih,
-                        decoration: InputDecoration(labelText: "Kategori"),
-                        items:
-                            listKategori.map((kategori) {
-                              return DropdownMenuItem(
-                                value: kategori,
-                                child: Text(kategori),
-                              );
-                            }).toList(),
-                        onChanged: (val) {
-                          setDialogState(() {
-                            kategoriTerpilih = val;
-                            layananFiltered =
-                                semuaLayanan
-                                    .where((e) => e.kategori == val)
-                                    .toList();
-                            layananTerpilih =
-                                layananFiltered.isNotEmpty
-                                    ? layananFiltered[0]
-                                    : null;
-                          });
-                        },
-                      ),
-                      SizedBox(height: 8),
-                      DropdownButtonFormField<LayananLaundry>(
-                        value: layananTerpilih,
-                        decoration: InputDecoration(labelText: "Layanan"),
-                        items:
-                            layananFiltered.map((e) {
-                              return DropdownMenuItem(
-                                value: e,
-                                child: Container(
-                                  width:
-                                      220, // ⬅️ atur lebar sesuai kebutuhan layout kamu
-                                  child: Text(
-                                    "${e.namaLayanan} - Rp ${e.harga}/${e.satuan}",
-                                    overflow:
-                                        TextOverflow
-                                            .ellipsis, // ⬅️ potong jadi ...
-                                    softWrap: false,
-                                    maxLines: 1, // ⬅️ biar lebih aman
-                                    style: TextStyle(fontSize: 15),
-                                  ),
-                                ),
-                              );
-                            }).toList(),
-                        onChanged:
-                            (val) =>
-                                setDialogState(() => layananTerpilih = val),
-                      ),
-                    ],
-                  ),
-                ),
-                actions: [
-                  TextButton(
-                    child: Text("Batal"),
-                    onPressed: () => Navigator.pop(context),
-                  ),
-                  ElevatedButton(
-                    child: Text("Simpan"),
-                    onPressed: () async {
-                      if (layananTerpilih == null) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text("Pilih layanan terlebih dahulu"),
-                          ),
-                        );
-                        return;
-                      }
-
-                      final updatedData = {
-                        'layananId': layananTerpilih!.id,
-                        'namaLayanan': layananTerpilih!.namaLayanan,
-                        'hargaSatuan': layananTerpilih!.harga,
-                        'satuan': layananTerpilih!.satuan,
-                        'jumlah':
-                            int.tryParse(jumlahController.text) ?? data.jumlah,
-                        'total':
-                            (int.tryParse(jumlahController.text) ??
-                                data.jumlah) *
-                            layananTerpilih!.harga,
-                        'namaPelanggan': toTitleCase(namaController.text),
-                        'tanggal': data.tanggal, // tetap gunakan tanggal lama
-                      };
-
-                      await FirebaseFirestore.instance
-                          .collection('penjualan')
-                          .doc(data.id)
-                          .update(updatedData);
-
-                      // ✅ Update data langsung di list lokal
-                      setState(() {
-                        final index = dataPenjualan.indexWhere(
-                          (e) => e.id == data.id,
-                        );
-                        if (index != -1) {
-                          dataPenjualan[index] = Penjualan(
-                            id: data.id,
-                            layananId: layananTerpilih!.id!,
-                            namaLayanan: layananTerpilih!.namaLayanan,
-                            hargaSatuan: layananTerpilih!.harga,
-                            satuan: layananTerpilih!.satuan,
-                            jumlah:
-                                int.tryParse(jumlahController.text) ??
-                                data.jumlah,
-                            total:
-                                (int.tryParse(jumlahController.text) ??
-                                    data.jumlah) *
-                                layananTerpilih!.harga,
-                            tanggal: data.tanggal,
-                            namaPelanggan: toTitleCase(namaController.text),
-                          );
-                        }
-                      });
-
-                      Navigator.pop(context);
-
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text("Data berhasil diperbarui"),
-                          backgroundColor: Colors.green,
-                        ),
-                      );
-                    },
-                  ),
-                ],
-              );
-            },
-          ),
-    );
+  Future<void> _deletePenjualan(String id) async {
+    final ref = FirebaseFirestore.instance.collection('penjualan').doc(id);
+    final detailSnapshot = await ref.collection('detail').get();
+    for (var d in detailSnapshot.docs) {
+      await d.reference.delete();
+    }
+    await ref.delete();
+    fetchPenjualan();
   }
 
   @override
   Widget build(BuildContext context) {
+    final currency = NumberFormat.currency(
+      locale: 'id_ID',
+      symbol: 'Rp. ',
+      decimalDigits: 0,
+    );
+
     return Scaffold(
       appBar: AppBar(
-        title: Text("Riwayat Penjualan"),
+        title: Text("Riwayat Penjualan", style: TextStyle(color: Colors.white)),
         backgroundColor: Colors.blue.shade900,
         actions: [
           IconButton(
-            icon: Icon(Icons.add),
+            icon: Icon(Icons.add, color: Colors.white),
             onPressed: () {
               Navigator.push(
                 context,
                 MaterialPageRoute(builder: (_) => InputPenjualanScreen()),
-              );
+              ).then((_) => fetchPenjualan());
             },
           ),
         ],
       ),
       body:
-          dataPenjualan.isEmpty && !isLoading
+          dataPenjualan.isEmpty
               ? Center(child: Text("Belum ada data penjualan."))
               : ListView.builder(
-                itemCount: dataPenjualan.length + (hasMore ? 1 : 0),
+                itemCount: dataPenjualan.length,
                 itemBuilder: (context, index) {
-                  if (index < dataPenjualan.length) {
-                    final item = dataPenjualan[index];
-                    return Card(
-                      margin: EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 10,
-                      ),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      elevation: 2,
-                      child: Padding(
-                        padding: const EdgeInsets.all(12),
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    item.namaPelanggan,
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 16,
+                  final item = dataPenjualan[index];
+                  return Card(
+                    margin: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    elevation: 2,
+                    child: Padding(
+                      padding: const EdgeInsets.all(12),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            item.namaPelanggan,
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          SizedBox(height: 4),
+                          ...item.detail.map((layanan) {
+                            return Text(
+                              "${layanan.namaLayanan} - ${layanan.jumlah} ${layanan.satuan} x ${currency.format(layanan.hargaSatuan)} = ${currency.format(layanan.total)}",
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(fontSize: 14),
+                            );
+                          }),
+                          SizedBox(height: 6),
+                          Text(
+                            "Tanggal: ${item.tanggal}",
+                            style: TextStyle(fontSize: 13, color: Colors.grey),
+                          ),
+                          SizedBox(height: 4),
+                          Text(
+                            "Total: ${currency.format(item.total)}",
+                            style: TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.end,
+                            children: [
+                              IconButton(
+                                icon: Icon(Icons.edit),
+                                onPressed: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder:
+                                          (_) =>
+                                              EditPenjualanScreen(data: item),
                                     ),
-                                  ),
-                                  SizedBox(height: 4),
-                                  Text(
-                                    "${item.namaLayanan} - ${item.jumlah} ${item.satuan}",
-                                  ),
-                                  Text("Tanggal: ${item.tanggal}"),
-                                ],
+                                  ).then((_) {
+                                    fetchPenjualan(); // refresh data setelah edit
+                                  });
+                                },
                               ),
-                            ),
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.end,
-                              children: [
-                                Text(
-                                  _formatCurrency.format(item.total),
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 16,
-                                  ),
-                                ),
-                                Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    IconButton(
-                                      icon: Icon(Icons.edit, size: 18),
-                                      padding: EdgeInsets.zero,
-                                      constraints: BoxConstraints(),
-                                      onPressed: () => showEditDialog(item),
-                                    ),
-                                    SizedBox(width: 4),
-                                    IconButton(
-                                      icon: Icon(
-                                        Icons.delete,
-                                        size: 18,
-                                        color: Colors.red,
-                                      ),
-                                      padding: EdgeInsets.zero,
-                                      constraints: BoxConstraints(),
-                                      onPressed:
-                                          () =>
-                                              showDeleteConfirmation(item.id!),
-                                    ),
-                                  ],
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
+
+                              IconButton(
+                                icon: Icon(Icons.delete, color: Colors.red),
+                                onPressed: () {
+                                  showDialog(
+                                    context: context,
+                                    builder:
+                                        (_) => AlertDialog(
+                                          title: Text("Hapus Transaksi"),
+                                          content: Text(
+                                            "Yakin ingin menghapus transaksi ini?",
+                                          ),
+                                          actions: [
+                                            TextButton(
+                                              child: Text("Batal"),
+                                              onPressed:
+                                                  () => Navigator.pop(context),
+                                            ),
+                                            ElevatedButton(
+                                              style: ElevatedButton.styleFrom(
+                                                backgroundColor: Colors.red,
+                                              ),
+                                              child: Text("Hapus"),
+                                              onPressed: () async {
+                                                Navigator.pop(context);
+                                                await _deletePenjualan(
+                                                  item.id!,
+                                                );
+                                              },
+                                            ),
+                                          ],
+                                        ),
+                                  );
+                                },
+                              ),
+                            ],
+                          ),
+                        ],
                       ),
-                    );
-                  } else {
-                    // Tombol Muat Lebih Banyak
-                    return Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      child: Center(
-                        child: ElevatedButton(
-                          onPressed: fetchPenjualan,
-                          child: Text("Muat Lebih Banyak"),
-                        ),
-                      ),
-                    );
-                  }
+                    ),
+                  );
                 },
               ),
     );

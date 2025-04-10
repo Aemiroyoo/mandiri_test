@@ -100,7 +100,7 @@ class DBHelper {
   static Future<List<Penjualan>> getAllPenjualan() async {
     final db = await initDb();
     final data = await db.query('penjualan', orderBy: 'tanggal DESC');
-    return data.map((e) => Penjualan.fromMap(e)).toList();
+    return data.map((e) => Penjualan.fromMap(e['id'].toString(), e)).toList();
   }
 
   static Future<int> clearPenjualan() async {
@@ -135,11 +135,11 @@ class DBHelper {
   /// tambah penjualan ke Firestore
   static Future<void> tambahPenjualan(Penjualan data) async {
     await FirebaseFirestore.instance.collection('penjualan').add({
-      'layanan_id': data.layananId,
-      'nama_layanan': data.namaLayanan,
-      'harga_satuan': data.hargaSatuan,
-      'satuan': data.satuan,
-      'jumlah': data.jumlah,
+      // 'layanan_id': data.layananId,
+      // 'nama_layanan': data.namaLayanan,
+      // 'harga_satuan': data.hargaSatuan,
+      // 'satuan': data.satuan,
+      // 'jumlah': data.jumlah,
       'total': data.total,
       'tanggal': data.tanggal,
       'nama_pelanggan': data.namaPelanggan,
