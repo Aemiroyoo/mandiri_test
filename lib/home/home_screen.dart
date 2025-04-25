@@ -3,14 +3,10 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:intl/intl.dart';
-import '../db/db_helper.dart';
 import '../models/penjualan.dart';
-
-import 'package:mandiri_test/sign_in/login_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   final String userRole;
-
   const HomeScreen({super.key, required this.userRole});
 
   @override
@@ -22,74 +18,20 @@ class _HomeScreenState extends State<HomeScreen> {
   late final String userRole;
   int totalPemasukan = 0;
   int totalOrder = 0;
+  int _selectedIndex = 0;
+  Map<int, double> dataHarian = {};
+  String selectedBulan = DateFormat('yyyy-MM').format(DateTime.now());
 
   @override
   void initState() {
     super.initState();
-    selectedBulan = DateFormat('yyyy-MM').format(DateTime.now());
-
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final args = ModalRoute.of(context)?.settings.arguments;
-      userRole = args as String? ?? 'admin_karyawan';
+      userRole =
+          ModalRoute.of(context)?.settings.arguments as String? ??
+          'admin_karyawan';
       fetchDataChart();
       loadMonthlyData();
       getUserData();
-    });
-  }
-
-  Map<int, double> dataHarian = {};
-  String selectedBulan = DateFormat('yyyy-MM').format(DateTime.now());
-
-  Future<void> loadMonthlyData() async {
-    try {
-      final snapshot =
-          await FirebaseFirestore.instance.collection('penjualan').get();
-
-      final List<Penjualan> semuaData =
-          snapshot.docs.map((doc) {
-            final data = doc.data();
-            return Penjualan(
-              id: doc.id,
-              total: data['total'],
-              tanggal: data['tanggal'],
-              namaPelanggan: data['namaPelanggan'],
-              detail: [],
-            );
-          }).toList();
-
-      final dataBulanIni =
-          semuaData.where((e) => e.tanggal.startsWith(selectedBulan)).toList();
-
-      totalPemasukan = dataBulanIni.fold(0, (sum, item) => sum + item.total);
-      totalOrder = dataBulanIni.length;
-
-      setState(() {});
-    } catch (e) {
-      print("Gagal memuat data dari Firestore: $e");
-    }
-  }
-
-  Future<void> fetchDataChart() async {
-    final snapshot =
-        await FirebaseFirestore.instance
-            .collection('penjualan')
-            .where('tanggal', isGreaterThanOrEqualTo: '$selectedBulan-01')
-            .where('tanggal', isLessThanOrEqualTo: '$selectedBulan-31')
-            .get();
-
-    print("Fetch data untuk bulan: $selectedBulan");
-    print("Total dokumen ditemukan: ${snapshot.docs.length}");
-
-    Map<int, double> mapData = {};
-    for (var doc in snapshot.docs) {
-      final tanggal = doc['tanggal'];
-      final total = (doc['total'] ?? 0).toDouble();
-      final hari = int.parse(tanggal.split('-')[2]);
-      mapData.update(hari, (value) => value + total, ifAbsent: () => total);
-    }
-
-    setState(() {
-      dataHarian = mapData;
     });
   }
 
@@ -106,30 +48,120 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  Future<void> loadMonthlyData() async {
+    try {
+      final snapshot =
+          await FirebaseFirestore.instance
+              .collection('penjualan')
+              .where('tanggal', isGreaterThanOrEqualTo: '$selectedBulan-01')
+              .where('tanggal', isLessThanOrEqualTo: '$selectedBulan-31')
+              .get();
+
+      final semuaData =
+          snapshot.docs.map((doc) {
+            final data = doc.data();
+            return Penjualan(
+              id: doc.id,
+              total: data['total'] ?? 0,
+              tanggal: data['tanggal'] ?? '',
+              namaPelanggan: data['nama_pelanggan'] ?? '',
+              detail: [],
+            );
+          }).toList();
+
+      totalPemasukan = semuaData.fold(0, (sum, item) => sum + item.total);
+      totalOrder = semuaData.length;
+      setState(() {});
+    } catch (e) {
+      print("Gagal memuat data: $e");
+    }
+  }
+
+  Future<void> fetchDataChart() async {
+    final snapshot =
+        await FirebaseFirestore.instance
+            .collection('penjualan')
+            .where('tanggal', isGreaterThanOrEqualTo: '$selectedBulan-01')
+            .where('tanggal', isLessThanOrEqualTo: '$selectedBulan-31')
+            .get();
+
+    Map<int, double> mapData = {};
+    for (var doc in snapshot.docs) {
+      final tanggal = doc['tanggal'];
+      final total = (doc['total'] ?? 0).toDouble();
+      final hari = int.parse(tanggal.split('-')[2]);
+      mapData.update(hari, (value) => value + total, ifAbsent: () => total);
+    }
+
+    setState(() {
+      dataHarian = mapData;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: const Color(0xFFF9FAFB),
       bottomNavigationBar: BottomNavigationBar(
+        currentIndex: _selectedIndex,
+        onTap: (index) {
+          setState(() => _selectedIndex = index);
+          // handle navigation if needed
+        },
+        backgroundColor: const Color(0xFFF9FAFB),
         selectedItemColor: Colors.black,
         unselectedItemColor: Colors.grey,
+        showSelectedLabels: false,
+        showUnselectedLabels: false,
+        elevation: 0,
         items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home), label: ""),
-          BottomNavigationBarItem(icon: Icon(Icons.settings), label: ""),
-          BottomNavigationBarItem(icon: Icon(Icons.person), label: ""),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.home_outlined),
+            activeIcon: Icon(Icons.home),
+            label: 'Home',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.settings_outlined),
+            activeIcon: Icon(Icons.settings),
+            label: 'Settings',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.person_outline),
+            activeIcon: Icon(Icons.person),
+            label: 'Profile',
+          ),
         ],
       ),
+
       body: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(20),
           child: ListView(
             children: [
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text(
-                    "Homepage",
-                    style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                  Row(
+                    children: [
+                      const CircleAvatar(
+                        radius: 26,
+                        backgroundColor: Colors.grey,
+                      ),
+                      const SizedBox(width: 12),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text("Hello,", style: TextStyle(fontSize: 16)),
+                          Text(
+                            namaUser ?? '-',
+                            style: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
                   ),
                   IconButton(
                     icon: const Icon(Icons.logout),
@@ -140,231 +172,85 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 ],
               ),
-              const SizedBox(height: 16),
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  border: Border.all(
-                    color: const Color.fromARGB(255, 96, 96, 96),
-                  ),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Row(
+              const SizedBox(height: 24),
+              SizedBox(
+                height: 80,
+                child: ListView(
+                  scrollDirection: Axis.horizontal,
                   children: [
-                    const CircleAvatar(
-                      radius: 24,
-                      backgroundColor: Colors.grey,
+                    _buildInfoCard(
+                      "Total Pemasukan",
+                      "Rp. ${NumberFormat("#,###").format(totalPemasukan)},-",
+                      Icons.trending_up,
                     ),
                     const SizedBox(width: 12),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text("Hallo,", style: TextStyle(fontSize: 16)),
-                        Text(
-                          namaUser ?? "-",
-                          style: const TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ],
+                    _buildInfoCard(
+                      "Jumlah Order",
+                      "$totalOrder transaksi",
+                      Icons.list_alt,
                     ),
                   ],
                 ),
               ),
+
+              const SizedBox(height: 24),
+              _buildDropdownBulan(),
               const SizedBox(height: 16),
-              Row(
-                children: [
-                  Expanded(
-                    child: Card(
-                      child: Padding(
-                        padding: const EdgeInsets.all(12),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text(
-                              "Total Pemasukan",
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 16,
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              "Rp. ${NumberFormat("#,###").format(totalPemasukan)},-",
-                              style: const TextStyle(fontSize: 14),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Card(
-                      child: Padding(
-                        padding: const EdgeInsets.all(12),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text(
-                              "Jumlah Order",
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 16,
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              "Total: $totalOrder",
-                              style: const TextStyle(fontSize: 14),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 26),
-              Row(
-                children: [
-                  const Text("Pilih Bulan:"),
-                  const SizedBox(width: 10),
-                  DropdownButton<String>(
-                    value: selectedBulan,
-                    items: List.generate(12, (index) {
-                      final date = DateTime(DateTime.now().year, index + 1);
-                      final label = DateFormat('yyyy-MM').format(date);
-                      return DropdownMenuItem(
-                        value: label,
-                        child: Text(
-                          DateFormat('MMMM yyyy', 'id_ID').format(date),
-                        ),
-                      );
-                    }),
-                    onChanged: (value) {
-                      if (value != null) {
-                        setState(() {
-                          selectedBulan = value;
-                        });
-                        fetchDataChart(); // ✅ grafik update
-                        loadMonthlyData(); // ✅ total dan order update
-                      }
-                    },
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
               SizedBox(
-                height: 250,
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 10),
-                  child: LineChart(
-                    LineChartData(
-                      maxY: 600000,
-                      minX: 1,
-                      maxX: 30,
-                      minY: 0,
-                      titlesData: FlTitlesData(
-                        show: true,
-                        bottomTitles: AxisTitles(
-                          sideTitles: SideTitles(
-                            showTitles: true,
-                            interval: 2,
-                            reservedSize: 32,
-                            getTitlesWidget: (value, meta) {
-                              return SideTitleWidget(
-                                space: 6,
-                                meta: meta,
-                                child: Transform.rotate(
-                                  angle: -0.9,
-                                  child: Text(
-                                    "${value.toInt()}",
-                                    style: const TextStyle(
-                                      fontSize: 11,
-                                      color: Colors.black54,
-                                      fontWeight: FontWeight.w800,
-                                    ),
-                                  ),
-                                ),
-                              );
-                            },
+                height: 220,
+                child: LineChart(
+                  LineChartData(
+                    maxY: 600000,
+                    minX: 1,
+                    maxX: 30,
+                    minY: 0,
+                    titlesData: FlTitlesData(show: false),
+                    lineBarsData: [
+                      LineChartBarData(
+                        spots: List.generate(
+                          30,
+                          (i) => FlSpot(
+                            (i + 1).toDouble(),
+                            dataHarian[i + 1] ?? 0,
                           ),
                         ),
-                        leftTitles: AxisTitles(
-                          sideTitles: SideTitles(
-                            showTitles: true,
-                            reservedSize: 35,
-                            getTitlesWidget: (value, meta) {
-                              return Text(
-                                "${NumberFormat.compact().format(value)}",
-                                style: const TextStyle(
-                                  fontSize: 11,
-                                  color: Colors.black54,
-                                  fontWeight: FontWeight.w800,
-                                ),
-                              );
-                            },
-                          ),
-                        ),
-                        topTitles: AxisTitles(
-                          sideTitles: SideTitles(showTitles: false),
-                        ),
-                        rightTitles: AxisTitles(
-                          sideTitles: SideTitles(showTitles: false),
-                        ),
+                        isCurved: true,
+                        barWidth: 3,
+                        color: Colors.blue,
+                        dotData: FlDotData(show: false),
                       ),
-                      lineTouchData: LineTouchData(enabled: false),
-                      clipData: FlClipData.none(),
-                      gridData: FlGridData(show: false),
-                      borderData: FlBorderData(show: true),
-                      extraLinesData: ExtraLinesData(),
-                      lineBarsData: [
-                        LineChartBarData(
-                          spots: List.generate(30, (i) {
-                            final day = i + 1;
-                            return FlSpot(day.toDouble(), dataHarian[day] ?? 0);
-                          }),
-                          isCurved: false,
-                          dotData: FlDotData(show: false),
-                          barWidth: 2,
-                          color: Colors.blue,
-                        ),
-                      ],
-                    ),
+                    ],
                   ),
                 ),
               ),
               const SizedBox(height: 24),
               const Text(
                 "Menu Admin",
-                style: TextStyle(fontWeight: FontWeight.bold),
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
               ),
               const SizedBox(height: 12),
               Wrap(
                 spacing: 14,
                 runSpacing: 14,
                 children: [
-                  // if (widget.userRole == 'admin_master')
                   menuButton1(
                     "Daftar Barang",
                     () => Navigator.pushNamed(context, '/daftar-harga'),
                   ),
-                  // if (widget.userRole == 'admin_karyawan') ...[
                   menuButton1("Input Penjualan", () {
                     Navigator.pushNamed(context, '/input-penjualan').then((_) {
                       fetchDataChart();
                       loadMonthlyData();
                     });
                   }),
-                  menuButton1("Riwayat Penjualan", () {
-                    Navigator.pushNamed(context, '/riwayat-penjualan');
-                  }),
-                  // ],
-                  menuButton1("Laporan Penjualan", () {
-                    Navigator.pushNamed(context, '/laporan-penjualan');
-                  }),
+                  menuButton1(
+                    "Riwayat Penjualan",
+                    () => Navigator.pushNamed(context, '/riwayat-penjualan'),
+                  ),
+                  menuButton1(
+                    "Laporan Penjualan",
+                    () => Navigator.pushNamed(context, '/laporan-penjualan'),
+                  ),
                 ],
               ),
             ],
@@ -374,20 +260,84 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget menuButton(String title, {double width = 150, double height = 60}) {
+  Widget _buildInfoCard(String title, String value, IconData icon) {
     return Container(
-      width: width,
-      height: height,
+      width: 240,
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.grey.shade200,
-        borderRadius: BorderRadius.circular(8),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 1)],
       ),
-      alignment: Alignment.center,
-      child: Text(
-        title,
-        style: const TextStyle(fontWeight: FontWeight.w500),
-        textAlign: TextAlign.center,
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: Colors.black,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(icon, color: Colors.white, size: 22),
+          ),
+          const SizedBox(width: 16),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: const TextStyle(fontSize: 14, color: Colors.black54),
+              ),
+              Text(
+                value,
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+        ],
       ),
+    );
+  }
+
+  Widget _buildDropdownBulan() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        const Text(
+          "Pilih Bulan Pemasukan:",
+          style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
+        ),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
+          decoration: BoxDecoration(
+            color: Colors.grey.shade100,
+            borderRadius: BorderRadius.circular(12),
+            boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 2)],
+          ),
+          child: DropdownButtonHideUnderline(
+            child: DropdownButton<String>(
+              value: selectedBulan,
+              items: List.generate(12, (index) {
+                final date = DateTime(DateTime.now().year, index + 1);
+                final label = DateFormat('yyyy-MM').format(date);
+                return DropdownMenuItem(
+                  value: label,
+                  child: Text(DateFormat('MMMM yyyy', 'id_ID').format(date)),
+                );
+              }),
+              onChanged: (value) {
+                if (value != null) {
+                  setState(() => selectedBulan = value);
+                  fetchDataChart();
+                  loadMonthlyData();
+                }
+              },
+            ),
+          ),
+        ),
+      ],
     );
   }
 
@@ -395,18 +345,14 @@ class _HomeScreenState extends State<HomeScreen> {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        margin: const EdgeInsets.all(2),
-        padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
         decoration: BoxDecoration(
-          color: Colors.grey.shade200,
+          color: Colors.white,
           borderRadius: BorderRadius.circular(12),
+          boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 4)],
         ),
-        child: Center(
-          child: Text(
-            title,
-            style: const TextStyle(fontWeight: FontWeight.bold),
-          ),
-        ),
+        child: Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
       ),
     );
   }

@@ -71,7 +71,8 @@ class _FormLayananScreenState extends State<FormLayananScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text("Tambah Layanan"),
+        iconTheme: IconThemeData(color: Colors.white),
+        title: Text("Tambah Layanan", style: TextStyle(color: Colors.white)),
         backgroundColor: Colors.blue.shade900,
       ),
       body: Padding(
@@ -140,7 +141,10 @@ class _FormLayananScreenState extends State<FormLayananScreen> {
                   backgroundColor: Colors.blue.shade900,
                   padding: EdgeInsets.symmetric(vertical: 14),
                 ),
-                child: Text("Simpan"),
+                child: Text(
+                  "Simpan",
+                  style: TextStyle(fontSize: 16, color: Colors.white),
+                ),
               ),
             ],
           ),

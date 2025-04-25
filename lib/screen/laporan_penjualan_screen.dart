@@ -97,6 +97,18 @@ class _LaporanPenjualanScreenState extends State<LaporanPenjualanScreen> {
     setState(() {});
   }
 
+  String capitalizeWords(String text) {
+    return text
+        .split(' ')
+        .map(
+          (word) =>
+              word.isEmpty
+                  ? ''
+                  : word[0].toUpperCase() + word.substring(1).toLowerCase(),
+        )
+        .join(' ');
+  }
+
   List<Penjualan> _filteredList() {
     final now = DateTime.now();
     if (selectedFilter == 'Hari ini') {
@@ -129,42 +141,71 @@ class _LaporanPenjualanScreenState extends State<LaporanPenjualanScreen> {
         child: Column(
           children: [
             // Filter Dropdown
-            Padding(
-              padding: const EdgeInsets.only(left: 5),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.start,
-                children: [
-                  Text(
-                    "Filter Data Penjualan",
-                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  "Filter Penjualan",
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
                   ),
-                  SizedBox(width: 40),
-                  DropdownButton<String>(
-                    value: selectedFilter,
-                    items:
-                        filterOptions.map((f) {
-                          return DropdownMenuItem(value: f, child: Text(f));
-                        }).toList(),
-                    onChanged: (value) {
-                      setState(() {
-                        selectedFilter = value!;
-                        _filterData();
-                      });
-                    },
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 4,
                   ),
-                ],
-              ),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade100,
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black12,
+                        blurRadius: 4,
+                        offset: Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: DropdownButtonHideUnderline(
+                    child: DropdownButton<String>(
+                      value: selectedFilter,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        color: Colors.black87,
+                      ),
+                      icon: const Icon(Icons.arrow_drop_down),
+                      items:
+                          filterOptions.map((f) {
+                            return DropdownMenuItem(value: f, child: Text(f));
+                          }).toList(),
+                      onChanged: (value) {
+                        setState(() {
+                          selectedFilter = value!;
+                          _filterData();
+                        });
+                      },
+                    ),
+                  ),
+                ),
+              ],
             ),
 
             SizedBox(height: 16),
 
             // Card Income
             Container(
-              padding: EdgeInsets.all(20),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
               decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
-                boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 8)],
+                color: const Color(0xFFF5F7FF), // warna lembut biru muda
+                borderRadius: BorderRadius.circular(20),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black12,
+                    blurRadius: 6,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
               ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -174,15 +215,35 @@ class _LaporanPenjualanScreenState extends State<LaporanPenjualanScreen> {
                     children: [
                       Text(
                         "IDR. ${NumberFormat("#,###").format(totalIncome)}",
-                        style: TextStyle(
+                        style: const TextStyle(
                           fontSize: 22,
-                          fontWeight: FontWeight.bold,
+                          fontWeight: FontWeight.w800,
+                          color: Colors.black87,
                         ),
                       ),
-                      Text("Income"),
+                      const SizedBox(height: 4),
+                      const Text(
+                        "Income",
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.black54,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
                     ],
                   ),
-                  Icon(Icons.account_balance_wallet, size: 45),
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: Colors.black,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Icon(
+                      Icons.account_balance_wallet_rounded,
+                      color: Colors.white,
+                      size: 28,
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -191,17 +252,39 @@ class _LaporanPenjualanScreenState extends State<LaporanPenjualanScreen> {
 
             // Tombol Export
             Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
-                ElevatedButton.icon(
-                  onPressed: () {},
-                  icon: Icon(Icons.file_copy),
-                  label: Text("Export to Excel"),
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: () {},
+                    icon: const Icon(Icons.file_copy),
+                    label: const Text("Export to Excel"),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.green[600],
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      elevation: 3,
+                    ),
+                  ),
                 ),
-                ElevatedButton.icon(
-                  onPressed: () {},
-                  icon: Icon(Icons.picture_as_pdf),
-                  label: Text("Export to PDF"),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: () {},
+                    icon: const Icon(Icons.picture_as_pdf),
+                    label: const Text("Export to PDF"),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.red[600],
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      elevation: 3,
+                    ),
+                  ),
                 ),
               ],
             ),
@@ -233,30 +316,62 @@ class _LaporanPenjualanScreenState extends State<LaporanPenjualanScreen> {
                               itemCount: dataTampil.length,
                               itemBuilder: (context, index) {
                                 final item = dataTampil[index];
-                                return ListTile(
-                                  title: Text(
-                                    item.namaPelanggan,
-                                    style: TextStyle(
-                                      fontSize: 17,
-                                      fontWeight: FontWeight.w700,
-                                    ),
+                                return Card(
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
                                   ),
-                                  subtitle: Text(
-                                    item.detail
-                                        .map(
-                                          (d) =>
-                                              "${d.namaLayanan} - ${d.jumlah} ${d.satuan}",
-                                        )
-                                        .join('\n'),
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.w500,
-                                    ),
+                                  margin: const EdgeInsets.symmetric(
+                                    vertical: 6,
                                   ),
-                                  trailing: Text(
-                                    "Rp. ${currencyFormat.format(item.total)},-",
-                                    style: TextStyle(
-                                      fontSize: 15,
-                                      fontWeight: FontWeight.w700,
+                                  elevation: 2,
+                                  child: Padding(
+                                    padding: const EdgeInsets.all(12),
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Row(
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.spaceBetween,
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Expanded(
+                                              child: Text(
+                                                capitalizeWords(
+                                                  item.namaPelanggan,
+                                                ),
+                                                style: const TextStyle(
+                                                  fontSize: 16,
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                              ),
+                                            ),
+                                            Text(
+                                              "Rp ${currencyFormat.format(item.total)},-",
+                                              style: TextStyle(
+                                                fontSize: 15,
+                                                fontWeight: FontWeight.w600,
+                                                color: Colors.green[700],
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                        const SizedBox(height: 8),
+                                        Text(
+                                          item.detail
+                                              .map(
+                                                (d) =>
+                                                    "• ${d.namaLayanan} - ${d.jumlah} ",
+                                                // ${d.satuan}
+                                              )
+                                              .join('\n'),
+                                          style: const TextStyle(
+                                            fontSize: 14,
+                                            color: Colors.black87,
+                                          ),
+                                        ),
+                                      ],
                                     ),
                                   ),
                                 );
