@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import '../db/db_helper.dart';
 import '../models/layanan_laundry.dart';
@@ -45,8 +46,15 @@ class _FormLayananScreenState extends State<FormLayananScreen> {
     if (_formKey.currentState!.validate()) {
       final harga = int.parse(_hargaController.text.replaceAll('.', ''));
 
+      final cleanedNamaLayanan = _namaController.text
+          .toLowerCase()
+          .split(' ')
+          .where((word) => word.isNotEmpty)
+          .map((word) => word[0].toUpperCase() + word.substring(1))
+          .join(' ');
+
       final layanan = LayananLaundry(
-        namaLayanan: _namaController.text,
+        namaLayanan: cleanedNamaLayanan,
         kategori: _kategoriTerpilih!,
         harga: harga,
         satuan: _satuanTerpilih!,
@@ -94,6 +102,7 @@ class _FormLayananScreenState extends State<FormLayananScreen> {
               TextFormField(
                 controller: _hargaController,
                 keyboardType: TextInputType.number,
+                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                 decoration: InputDecoration(labelText: "Harga"),
                 validator: (value) {
                   if (value == null || value.isEmpty) {

@@ -16,6 +16,15 @@ class EditPenjualanScreen extends StatefulWidget {
   State<EditPenjualanScreen> createState() => _EditPenjualanScreenState();
 }
 
+String capitalizeEachWord(String text) {
+  return text
+      .toLowerCase()
+      .split(' ')
+      .where((word) => word.isNotEmpty)
+      .map((word) => word[0].toUpperCase() + word.substring(1))
+      .join(' ');
+}
+
 class _EditPenjualanScreenState extends State<EditPenjualanScreen> {
   final namaController = TextEditingController();
 
@@ -98,7 +107,7 @@ class _EditPenjualanScreenState extends State<EditPenjualanScreen> {
         .doc(id);
 
     await penjualanRef.update({
-      'nama_pelanggan': namaController.text.trim(),
+      'nama_pelanggan': capitalizeEachWord(namaController.text.trim()),
       'total': totalBaru,
     });
 
@@ -110,12 +119,12 @@ class _EditPenjualanScreenState extends State<EditPenjualanScreen> {
       await d.reference.delete();
     }
 
-    // ⛳️ Tambahkan layanan baru (cukup sekali aja!)
+    // Tambahkan layanan baru
     for (var item in listDetail) {
       await detailRef.add({
-        'penjualan_id': id, // ✅ tambahkan ini
+        'penjualan_id': id,
         'layanan_id': item.layananId,
-        'nama_layanan': item.namaLayanan,
+        'nama_layanan': capitalizeEachWord(item.namaLayanan),
         'harga_satuan': item.hargaSatuan,
         'satuan': item.satuan,
         'jumlah': item.jumlah,
@@ -136,82 +145,116 @@ class _EditPenjualanScreenState extends State<EditPenjualanScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text("Edit Penjualan"),
+        iconTheme: IconThemeData(color: Colors.white),
+        title: Text("Edit Penjualan", style: TextStyle(color: Colors.white)),
         backgroundColor: Colors.blue.shade900,
         actions: [
-          IconButton(onPressed: simpanPerubahan, icon: Icon(Icons.save)),
+          IconButton(
+            onPressed: simpanPerubahan,
+            icon: Icon(Icons.save, color: Colors.white),
+            tooltip: "Simpan Perubahan",
+          ),
         ],
       ),
       body:
           isLoading
-              ? Center(child: CircularProgressIndicator())
+              ? Center(
+                child: CircularProgressIndicator(color: Colors.blue.shade900),
+              )
               : ListView(
-                padding: EdgeInsets.all(16),
+                padding: EdgeInsets.all(20),
                 children: [
-                  TextField(
-                    controller: namaController,
-                    decoration: InputDecoration(labelText: "Nama Pelanggan"),
+                  // Nama Pelanggan Field dengan styling yang lebih baik
+                  Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black12,
+                          blurRadius: 6,
+                          offset: Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    padding: EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          "Nama Pelanggan",
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
+                            color: Colors.blue.shade900,
+                          ),
+                        ),
+                        SizedBox(height: 8),
+                        TextField(
+                          controller: namaController,
+                          style: TextStyle(fontSize: 16),
+                          decoration: InputDecoration(
+                            hintText: "Masukkan nama pelanggan",
+                            contentPadding: EdgeInsets.symmetric(
+                              vertical: 8,
+                              horizontal: 0,
+                            ),
+                            isDense: true,
+                            border: UnderlineInputBorder(
+                              borderSide: BorderSide(
+                                color: Colors.grey.shade300,
+                              ),
+                            ),
+                            focusedBorder: UnderlineInputBorder(
+                              borderSide: BorderSide(
+                                color: Colors.blue.shade900,
+                                width: 2,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                  SizedBox(height: 16),
 
+                  SizedBox(height: 24),
+
+                  // Header untuk detail layanan
+                  if (listDetail.isNotEmpty)
+                    Text(
+                      "Detail Layanan",
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.blue.shade900,
+                      ),
+                    ),
+
+                  SizedBox(height: 12),
+
+                  // Generate list detail layanan
                   ...List.generate(listDetail.length, (i) {
                     final d = listDetail[i];
                     return Card(
-                      margin: EdgeInsets.only(bottom: 12),
+                      margin: EdgeInsets.only(bottom: 16),
+                      elevation: 4,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                       child: Padding(
-                        padding: EdgeInsets.all(12),
+                        padding: EdgeInsets.all(16),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            DropdownButtonFormField<LayananLaundry>(
-                              value: semuaLayanan.firstWhere(
-                                (e) => e.id == d.layananId,
-                                orElse: () => semuaLayanan.first,
-                              ),
-                              items:
-                                  semuaLayanan.map((layanan) {
-                                    return DropdownMenuItem(
-                                      value: layanan,
-                                      child: Text(layanan.namaLayanan),
-                                    );
-                                  }).toList(),
-                              onChanged: (value) {
-                                if (value != null) {
-                                  setState(() {
-                                    listDetail[i] = listDetail[i].copyWith(
-                                      layananId: value.id!,
-                                      namaLayanan: value.namaLayanan,
-                                      hargaSatuan: value.harga,
-                                      satuan: value.satuan,
-                                      total: value.harga * listDetail[i].jumlah,
-                                    );
-                                  });
-                                }
-                              },
-                            ),
-                            SizedBox(height: 8),
                             Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                Expanded(
-                                  child: TextFormField(
-                                    initialValue: d.jumlah.toString(),
-                                    keyboardType: TextInputType.number,
-                                    decoration: InputDecoration(
-                                      labelText: "Jumlah (${d.satuan})",
-                                    ),
-                                    onChanged: (val) {
-                                      final j = int.tryParse(val) ?? 1;
-                                      listDetail[i] = listDetail[i].copyWith(
-                                        jumlah: j,
-                                      );
-                                      hitungUlangTotal(i);
-                                    },
-                                  ),
-                                ),
-                                SizedBox(width: 8),
                                 Text(
-                                  currency.format(d.total),
-                                  style: TextStyle(fontWeight: FontWeight.bold),
+                                  "Layanan ${i + 1}",
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.blue.shade900,
+                                  ),
                                 ),
                                 IconButton(
                                   onPressed: () {
@@ -219,7 +262,126 @@ class _EditPenjualanScreenState extends State<EditPenjualanScreen> {
                                       listDetail.removeAt(i);
                                     });
                                   },
-                                  icon: Icon(Icons.delete, color: Colors.red),
+                                  icon: Icon(
+                                    Icons.delete,
+                                    color: Colors.red.shade700,
+                                  ),
+                                  padding: EdgeInsets.zero,
+                                  constraints: BoxConstraints(),
+                                  tooltip: "Hapus Layanan",
+                                ),
+                              ],
+                            ),
+                            SizedBox(height: 12),
+                            // Dropdown dengan styling yang lebih baik
+                            Container(
+                              decoration: BoxDecoration(
+                                border: Border.all(color: Colors.grey.shade300),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: DropdownButtonFormField<LayananLaundry>(
+                                value: semuaLayanan.firstWhere(
+                                  (e) => e.id == d.layananId,
+                                  orElse: () => semuaLayanan.first,
+                                ),
+                                decoration: InputDecoration(
+                                  labelText: "Pilih Layanan",
+                                  contentPadding: EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                    vertical: 4,
+                                  ),
+                                  border: InputBorder.none,
+                                ),
+                                items:
+                                    semuaLayanan.map((layanan) {
+                                      return DropdownMenuItem(
+                                        value: layanan,
+                                        child: Text(
+                                          layanan.namaLayanan,
+                                          style: TextStyle(fontSize: 15),
+                                        ),
+                                      );
+                                    }).toList(),
+                                onChanged: (value) {
+                                  if (value != null) {
+                                    setState(() {
+                                      listDetail[i] = listDetail[i].copyWith(
+                                        layananId: value.id!,
+                                        namaLayanan: value.namaLayanan,
+                                        hargaSatuan: value.harga,
+                                        satuan: value.satuan,
+                                        total:
+                                            value.harga * listDetail[i].jumlah,
+                                      );
+                                    });
+                                  }
+                                },
+                              ),
+                            ),
+
+                            SizedBox(height: 16),
+
+                            Row(
+                              crossAxisAlignment: CrossAxisAlignment.end,
+                              children: [
+                                // Field jumlah dengan styling yang lebih baik
+                                Expanded(
+                                  child: Container(
+                                    decoration: BoxDecoration(
+                                      border: Border.all(
+                                        color: Colors.grey.shade300,
+                                      ),
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    padding: EdgeInsets.symmetric(
+                                      horizontal: 12,
+                                      vertical: 4,
+                                    ),
+                                    child: TextFormField(
+                                      initialValue: d.jumlah.toString(),
+                                      keyboardType: TextInputType.number,
+                                      style: TextStyle(fontSize: 15),
+                                      decoration: InputDecoration(
+                                        labelText: "Jumlah",
+                                        labelStyle: TextStyle(fontSize: 14),
+                                        suffixText: d.satuan,
+                                        border: InputBorder.none,
+                                      ),
+                                      onChanged: (val) {
+                                        final j = int.tryParse(val) ?? 1;
+                                        setState(() {
+                                          listDetail[i] = listDetail[i]
+                                              .copyWith(jumlah: j);
+                                          hitungUlangTotal(i);
+                                        });
+                                      },
+                                    ),
+                                  ),
+                                ),
+
+                                SizedBox(width: 16),
+
+                                // Total dengan styling yang lebih baik
+                                Container(
+                                  padding: EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                    vertical: 10,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: Colors.blue.shade50,
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(
+                                      color: Colors.blue.shade100,
+                                    ),
+                                  ),
+                                  child: Text(
+                                    currency.format(d.total),
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.blue.shade900,
+                                      fontSize: 15,
+                                    ),
+                                  ),
                                 ),
                               ],
                             ),
@@ -229,10 +391,56 @@ class _EditPenjualanScreenState extends State<EditPenjualanScreen> {
                     );
                   }),
 
-                  OutlinedButton.icon(
-                    onPressed: tambahDetailKosong,
-                    icon: Icon(Icons.add),
-                    label: Text("Tambah Layanan"),
+                  SizedBox(height: 8),
+
+                  // Tombol tambah layanan dengan styling yang lebih baik
+                  Container(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: tambahDetailKosong,
+                      icon: Icon(Icons.add),
+                      label: Text(
+                        "Tambah Layanan",
+                        style: TextStyle(fontSize: 16),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.white,
+                        foregroundColor: Colors.blue.shade900,
+                        padding: EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                          side: BorderSide(color: Colors.blue.shade900),
+                        ),
+                        elevation: 0,
+                      ),
+                    ),
+                  ),
+
+                  SizedBox(height: 24),
+
+                  // Tombol simpan perubahan yang terlihat di bagian bawah
+                  Container(
+                    width: double.infinity,
+                    margin: EdgeInsets.only(bottom: 20),
+                    child: ElevatedButton(
+                      onPressed: simpanPerubahan,
+                      child: Text(
+                        "SIMPAN PERUBAHAN",
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.blue.shade900,
+                        foregroundColor: Colors.white,
+                        padding: EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        elevation: 2,
+                      ),
+                    ),
                   ),
                 ],
               ),

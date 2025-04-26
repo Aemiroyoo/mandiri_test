@@ -54,9 +54,6 @@ class _LaporanPenjualanScreenState extends State<LaporanPenjualanScreen> {
             );
           }).toList();
 
-      // ✅ Pindahkan ke dalam setState agar update UI langsung saat selesai load
-      _filterData();
-
       semuaData.add(
         Penjualan(
           id: doc.id,
@@ -67,6 +64,9 @@ class _LaporanPenjualanScreenState extends State<LaporanPenjualanScreen> {
         ),
       );
     }
+
+    // Filter data setelah semua data di-load
+    _filterData();
   }
 
   void _filterData() {
@@ -133,268 +133,411 @@ class _LaporanPenjualanScreenState extends State<LaporanPenjualanScreen> {
     final currencyFormat = NumberFormat.decimalPattern('id');
     return Scaffold(
       appBar: AppBar(
-        title: Text("Laporan Penjualan", style: TextStyle(color: Colors.white)),
+        elevation: 0,
+        iconTheme: IconThemeData(color: Colors.white),
+        title: Text(
+          "Laporan Penjualan",
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+        ),
         backgroundColor: Colors.blue.shade900,
       ),
-      body: Padding(
-        padding: EdgeInsets.all(16),
-        child: Column(
-          children: [
-            // Filter Dropdown
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  "Filter Penjualan",
-                  style: const TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                  ),
+      body: Column(
+        children: [
+          // Header with gradient background
+          Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [Colors.blue.shade900, Colors.blue.shade800],
+              ),
+              borderRadius: BorderRadius.only(
+                bottomLeft: Radius.circular(24),
+                bottomRight: Radius.circular(24),
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.blue.shade900.withOpacity(0.3),
+                  offset: Offset(0, 4),
+                  blurRadius: 10,
                 ),
+              ],
+            ),
+            padding: EdgeInsets.only(left: 20, right: 20, top: 0, bottom: 24),
+            child: Column(
+              children: [
+                // Income Card
                 Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 4,
-                  ),
+                  padding: EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                  width: double.infinity,
                   decoration: BoxDecoration(
-                    color: Colors.grey.shade100,
-                    borderRadius: BorderRadius.circular(12),
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
                     boxShadow: [
                       BoxShadow(
                         color: Colors.black12,
-                        blurRadius: 4,
-                        offset: Offset(0, 2),
+                        blurRadius: 8,
+                        offset: Offset(0, 3),
                       ),
                     ],
                   ),
-                  child: DropdownButtonHideUnderline(
-                    child: DropdownButton<String>(
-                      value: selectedFilter,
-                      style: const TextStyle(
-                        fontSize: 14,
-                        color: Colors.black87,
-                      ),
-                      icon: const Icon(Icons.arrow_drop_down),
-                      items:
-                          filterOptions.map((f) {
-                            return DropdownMenuItem(value: f, child: Text(f));
-                          }).toList(),
-                      onChanged: (value) {
-                        setState(() {
-                          selectedFilter = value!;
-                          _filterData();
-                        });
-                      },
-                    ),
-                  ),
-                ),
-              ],
-            ),
-
-            SizedBox(height: 16),
-
-            // Card Income
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-              decoration: BoxDecoration(
-                color: const Color(0xFFF5F7FF), // warna lembut biru muda
-                borderRadius: BorderRadius.circular(20),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black12,
-                    blurRadius: 6,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Column(
+                  child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        "IDR. ${NumberFormat("#,###").format(totalIncome)}",
-                        style: const TextStyle(
-                          fontSize: 22,
-                          fontWeight: FontWeight.w800,
-                          color: Colors.black87,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      const Text(
                         "Income",
                         style: TextStyle(
-                          fontSize: 14,
-                          color: Colors.black54,
+                          fontSize: 16,
+                          color: Colors.grey.shade700,
                           fontWeight: FontWeight.w500,
                         ),
                       ),
+                      SizedBox(height: 8),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            "IDR. ${NumberFormat("#,###").format(totalIncome)}",
+                            style: TextStyle(
+                              fontSize: 26,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.black87,
+                            ),
+                          ),
+                          Container(
+                            padding: EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: Colors.blue.shade900,
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Icon(
+                              Icons.account_balance_wallet_rounded,
+                              color: Colors.white,
+                              size: 26,
+                            ),
+                          ),
+                        ],
+                      ),
                     ],
-                  ),
-                  Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: Colors.black,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: const Icon(
-                      Icons.account_balance_wallet_rounded,
-                      color: Colors.white,
-                      size: 28,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            SizedBox(height: 24),
-
-            // Tombol Export
-            Row(
-              children: [
-                Expanded(
-                  child: ElevatedButton.icon(
-                    onPressed: () {},
-                    icon: const Icon(Icons.file_copy),
-                    label: const Text("Export to Excel"),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.green[600],
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      elevation: 3,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: ElevatedButton.icon(
-                    onPressed: () {},
-                    icon: const Icon(Icons.picture_as_pdf),
-                    label: const Text("Export to PDF"),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.red[600],
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      elevation: 3,
-                    ),
                   ),
                 ),
               ],
             ),
+          ),
 
-            SizedBox(height: 24),
-
-            // List Data Tampil
-            Expanded(
-              child: Column(
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.only(left: 14.0),
-                    child: Align(
-                      alignment: Alignment.centerLeft,
-                      child: Text(
-                        "Total Data: $totalFiltered",
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.w600,
+          Padding(
+            padding: EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+            child: Column(
+              children: [
+                // Filter Row with nice dropdown
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      "Filter Penjualan",
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.grey.shade800,
+                      ),
+                    ),
+                    Container(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.grey.shade300),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.05),
+                            blurRadius: 8,
+                            offset: Offset(0, 3),
+                          ),
+                        ],
+                      ),
+                      child: DropdownButtonHideUnderline(
+                        child: DropdownButton<String>(
+                          padding: EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 4,
+                          ),
+                          value: selectedFilter,
+                          isDense: true,
+                          style: TextStyle(
+                            fontSize: 16,
+                            color: Colors.black87,
+                            fontWeight: FontWeight.w500,
+                          ),
+                          icon: Icon(
+                            Icons.keyboard_arrow_down,
+                            color: Colors.blue.shade900,
+                          ),
+                          items:
+                              filterOptions.map((f) {
+                                return DropdownMenuItem(
+                                  value: f,
+                                  child: Text(f),
+                                );
+                              }).toList(),
+                          onChanged: (value) {
+                            setState(() {
+                              selectedFilter = value!;
+                              _filterData();
+                            });
+                          },
                         ),
                       ),
                     ),
+                  ],
+                ),
+
+                SizedBox(height: 16),
+
+                // Export Buttons
+                Row(
+                  children: [
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        onPressed: () {},
+                        icon: Icon(Icons.file_copy, size: 18),
+                        label: Text(
+                          "Export to Excel",
+                          style: TextStyle(fontWeight: FontWeight.w600),
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.green.shade600,
+                          foregroundColor: Colors.white,
+                          padding: EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          elevation: 2,
+                        ),
+                      ),
+                    ),
+                    SizedBox(width: 12),
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        onPressed: () {},
+                        icon: Icon(Icons.picture_as_pdf, size: 18),
+                        label: Text(
+                          "Export to PDF",
+                          style: TextStyle(fontWeight: FontWeight.w600),
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.red.shade600,
+                          foregroundColor: Colors.white,
+                          padding: EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          elevation: 2,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+
+          // Total Data Row
+          Padding(
+            padding: EdgeInsets.symmetric(horizontal: 20),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  "Total Data: $totalFiltered",
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.grey.shade800,
                   ),
-                  Expanded(
-                    child:
-                        dataTampil.isEmpty
-                            ? Center(child: Text("Tidak ada data."))
-                            : ListView.builder(
-                              itemCount: dataTampil.length,
-                              itemBuilder: (context, index) {
-                                final item = dataTampil[index];
-                                return Card(
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  margin: const EdgeInsets.symmetric(
-                                    vertical: 6,
-                                  ),
-                                  elevation: 2,
-                                  child: Padding(
-                                    padding: const EdgeInsets.all(12),
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
+                ),
+                Text(
+                  "Riwayat Transaksi",
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.blue.shade900,
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          SizedBox(height: 8),
+
+          // List of Transactions
+          Expanded(
+            child:
+                dataTampil.isEmpty
+                    ? Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.receipt_long,
+                            size: 64,
+                            color: Colors.grey.shade400,
+                          ),
+                          SizedBox(height: 16),
+                          Text(
+                            "Tidak ada data transaksi",
+                            style: TextStyle(
+                              fontSize: 16,
+                              color: Colors.grey.shade600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    )
+                    : ListView.builder(
+                      padding: EdgeInsets.symmetric(horizontal: 20),
+                      itemCount: dataTampil.length,
+                      itemBuilder: (context, index) {
+                        final item = dataTampil[index];
+                        return Card(
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            side: BorderSide(color: Colors.grey.shade200),
+                          ),
+                          margin: EdgeInsets.only(bottom: 12),
+                          elevation: 1,
+                          child: Padding(
+                            padding: EdgeInsets.all(14),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Row(
                                       children: [
-                                        Row(
-                                          mainAxisAlignment:
-                                              MainAxisAlignment.spaceBetween,
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
-                                          children: [
-                                            Expanded(
-                                              child: Text(
-                                                capitalizeWords(
-                                                  item.namaPelanggan,
-                                                ),
-                                                style: const TextStyle(
-                                                  fontSize: 16,
-                                                  fontWeight: FontWeight.bold,
-                                                ),
-                                              ),
+                                        CircleAvatar(
+                                          radius: 16,
+                                          backgroundColor: Colors.blue.shade100,
+                                          child: Text(
+                                            capitalizeWords(
+                                              item.namaPelanggan,
+                                            )[0],
+                                            style: TextStyle(
+                                              fontWeight: FontWeight.bold,
+                                              color: Colors.blue.shade900,
                                             ),
-                                            Text(
-                                              "Rp ${currencyFormat.format(item.total)},-",
-                                              style: TextStyle(
-                                                fontSize: 15,
-                                                fontWeight: FontWeight.w600,
-                                                color: Colors.green[700],
-                                              ),
-                                            ),
-                                          ],
+                                          ),
                                         ),
-                                        const SizedBox(height: 8),
+                                        SizedBox(width: 10),
                                         Text(
-                                          item.detail
-                                              .map(
-                                                (d) =>
-                                                    "• ${d.namaLayanan} - ${d.jumlah} ",
-                                                // ${d.satuan}
-                                              )
-                                              .join('\n'),
-                                          style: const TextStyle(
-                                            fontSize: 14,
-                                            color: Colors.black87,
+                                          capitalizeWords(item.namaPelanggan),
+                                          style: TextStyle(
+                                            fontSize: 16,
+                                            fontWeight: FontWeight.bold,
                                           ),
                                         ),
                                       ],
                                     ),
-                                  ),
-                                );
-                              },
+                                    Container(
+                                      padding: EdgeInsets.symmetric(
+                                        horizontal: 10,
+                                        vertical: 4,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: Colors.green.shade50,
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      child: Text(
+                                        "Rp ${currencyFormat.format(item.total)}",
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.green.shade700,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                SizedBox(height: 12),
+                                Divider(height: 1, color: Colors.grey.shade200),
+                                SizedBox(height: 10),
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children:
+                                      item.detail.map((d) {
+                                        return Padding(
+                                          padding: EdgeInsets.only(bottom: 6),
+                                          child: Row(
+                                            mainAxisAlignment:
+                                                MainAxisAlignment.spaceBetween,
+                                            children: [
+                                              Row(
+                                                children: [
+                                                  Icon(
+                                                    Icons.circle,
+                                                    size: 8,
+                                                    color: Colors.blue.shade900,
+                                                  ),
+                                                  SizedBox(width: 8),
+                                                  Text(
+                                                    d.namaLayanan,
+                                                    style: TextStyle(
+                                                      fontSize: 14,
+                                                      color: Colors.black87,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                              Text(
+                                                "${d.jumlah} ${d.satuan}",
+                                                style: TextStyle(
+                                                  fontSize: 14,
+                                                  fontWeight: FontWeight.w500,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        );
+                                      }).toList(),
+                                ),
+                              ],
                             ),
-                  ),
-
-                  if (dataTampil.length < semuaData.length &&
-                      dataTampil.length < _filteredList().length)
-                    ElevatedButton(
-                      onPressed: () {
-                        setState(() {
-                          limit += 10;
-                          _filterData();
-                        });
+                          ),
+                        );
                       },
-                      child: Text("Load More"),
                     ),
-                ],
+          ),
+
+          // Load More Button
+          if (dataTampil.length < semuaData.length &&
+              dataTampil.length < _filteredList().length)
+            Padding(
+              padding: EdgeInsets.all(16),
+              child: ElevatedButton(
+                onPressed: () {
+                  setState(() {
+                    limit += 10;
+                    _filterData();
+                  });
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.blue.shade900,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                ),
+                child: Text(
+                  "Muat Lebih Banyak",
+                  style: TextStyle(fontWeight: FontWeight.w600),
+                ),
               ),
             ),
-          ],
-        ),
+        ],
       ),
     );
   }
