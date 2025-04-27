@@ -6,6 +6,7 @@ import 'package:intl/date_symbol_data_local.dart';
 import 'package:mandiri_test/screen/daftar_harga_screen.dart';
 import 'package:mandiri_test/screen/input_penjualan_screen.dart';
 import 'package:mandiri_test/screen/laporan_penjualan_screen.dart';
+import 'package:mandiri_test/screen/profile_screen.dart';
 import 'package:mandiri_test/screen/riwayat_penjualan_screen.dart';
 import 'package:mandiri_test/sign_in/login_screen.dart';
 import 'package:mandiri_test/home/home_screen.dart'; // tambahkan ini kalau belum
@@ -42,6 +43,7 @@ class MyApp extends StatelessWidget {
         '/input-penjualan': (context) => InputPenjualanScreen(),
         '/riwayat-penjualan': (context) => RiwayatPenjualanScreen(),
         '/laporan-penjualan': (context) => LaporanPenjualanScreen(),
+        '/profile': (context) => ProfileScreen(),
       },
 
       // Cek apakah user sudah login

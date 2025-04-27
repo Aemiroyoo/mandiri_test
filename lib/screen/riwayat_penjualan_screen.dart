@@ -126,7 +126,7 @@ class _RiwayatPenjualanScreenState extends State<RiwayatPenjualanScreen> {
   Widget build(BuildContext context) {
     final currency = NumberFormat.currency(
       locale: 'id_ID',
-      symbol: 'Rp',
+      symbol: 'Rp. ',
       decimalDigits: 0,
     );
 

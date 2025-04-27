@@ -16,7 +16,7 @@ class _DaftarHargaScreenState extends State<DaftarHargaScreen> {
   final List<String> _kategoriList = ["Kiloan", "Satuan", "Boneka", "Sepatu"];
   final _formatCurrency = NumberFormat.currency(
     locale: 'id_ID',
-    symbol: 'Rp',
+    symbol: 'Rp. ',
     decimalDigits: 0,
   );
   final TextEditingController _searchController = TextEditingController();
@@ -516,7 +516,7 @@ class _DaftarHargaScreenState extends State<DaftarHargaScreen> {
                           borderRadius: BorderRadius.circular(8),
                         ),
                         prefixIcon: Icon(Icons.monetization_on),
-                        prefixText: "Rp ",
+                        prefixText: "Rp. ",
                       ),
                       onChanged:
                           (_) => _updateHargaTextFormatting(hargaController),

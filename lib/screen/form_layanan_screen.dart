@@ -79,84 +79,360 @@ class _FormLayananScreenState extends State<FormLayananScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        elevation: 0,
         iconTheme: IconThemeData(color: Colors.white),
-        title: Text("Tambah Layanan", style: TextStyle(color: Colors.white)),
+        title: Text(
+          "Tambah Layanan",
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+        ),
         backgroundColor: Colors.blue.shade900,
       ),
-      body: Padding(
-        padding: EdgeInsets.all(16),
-        child: Form(
-          key: _formKey,
-          child: ListView(
-            children: [
-              TextFormField(
-                controller: _namaController,
-                decoration: InputDecoration(labelText: "Nama Layanan"),
-                validator:
-                    (value) =>
-                        value == null || value.isEmpty
-                            ? "Nama tidak boleh kosong"
-                            : null,
-              ),
-              SizedBox(height: 12),
-              TextFormField(
-                controller: _hargaController,
-                keyboardType: TextInputType.number,
-                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                decoration: InputDecoration(labelText: "Harga"),
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return "Harga tidak boleh kosong";
-                  }
-                  final cleaned = value.replaceAll('.', '');
-                  if (int.tryParse(cleaned) == null) {
-                    return "Harga harus berupa angka";
-                  }
-                  return null;
-                },
-              ),
-              SizedBox(height: 12),
-              DropdownButtonFormField<String>(
-                value: _kategoriTerpilih,
-                decoration: InputDecoration(labelText: "Kategori"),
-                items:
-                    _kategoriList
-                        .map(
-                          (item) =>
-                              DropdownMenuItem(value: item, child: Text(item)),
-                        )
-                        .toList(),
-                onChanged: (value) => setState(() => _kategoriTerpilih = value),
-                validator: (value) => value == null ? "Pilih kategori" : null,
-              ),
-              SizedBox(height: 12),
-              DropdownButtonFormField<String>(
-                value: _satuanTerpilih,
-                decoration: InputDecoration(labelText: "Satuan"),
-                items:
-                    _satuanList
-                        .map(
-                          (item) =>
-                              DropdownMenuItem(value: item, child: Text(item)),
-                        )
-                        .toList(),
-                onChanged: (value) => setState(() => _satuanTerpilih = value),
-                validator: (value) => value == null ? "Pilih satuan" : null,
-              ),
-              SizedBox(height: 24),
-              ElevatedButton(
-                onPressed: _simpanData,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.blue.shade900,
-                  padding: EdgeInsets.symmetric(vertical: 14),
-                ),
-                child: Text(
-                  "Simpan",
-                  style: TextStyle(fontSize: 16, color: Colors.white),
-                ),
-              ),
-            ],
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.topCenter,
+            colors: [Colors.blue.shade900, Colors.blue.shade900],
+            stops: [0, 0.3],
           ),
+        ),
+        child: Column(
+          children: [
+            SizedBox(height: 20),
+            Expanded(
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.only(
+                    topLeft: Radius.circular(30),
+                    topRight: Radius.circular(30),
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.1),
+                      blurRadius: 10,
+                      offset: Offset(0, -5),
+                    ),
+                  ],
+                ),
+                child: Padding(
+                  padding: EdgeInsets.all(24),
+                  child: Form(
+                    key: _formKey,
+                    child: ListView(
+                      children: [
+                        Text(
+                          "Detail Layanan",
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.blue.shade900,
+                          ),
+                        ),
+                        SizedBox(height: 20),
+                        // Nama Layanan Field
+                        TextFormField(
+                          controller: _namaController,
+                          decoration: InputDecoration(
+                            labelText: "Nama Layanan",
+                            labelStyle: TextStyle(
+                              color: Colors.grey.shade700,
+                              fontWeight: FontWeight.w500,
+                            ),
+                            floatingLabelStyle: TextStyle(
+                              color: Colors.blue.shade900,
+                              fontWeight: FontWeight.w600,
+                            ),
+                            prefixIcon: Icon(
+                              Icons.local_laundry_service_outlined,
+                              color: Colors.blue.shade900,
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide(
+                                color: Colors.grey.shade300,
+                              ),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide(
+                                color: Colors.blue.shade900,
+                                width: 2,
+                              ),
+                            ),
+                            errorBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide(
+                                color: Colors.red.shade300,
+                              ),
+                            ),
+                            focusedErrorBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide(
+                                color: Colors.red.shade700,
+                                width: 2,
+                              ),
+                            ),
+                            filled: true,
+                            fillColor: Colors.grey.shade50,
+                          ),
+                          validator:
+                              (value) =>
+                                  value == null || value.isEmpty
+                                      ? "Nama tidak boleh kosong"
+                                      : null,
+                        ),
+                        SizedBox(height: 20),
+                        // Harga Field
+                        TextFormField(
+                          controller: _hargaController,
+                          keyboardType: TextInputType.number,
+                          inputFormatters: [
+                            FilteringTextInputFormatter.digitsOnly,
+                          ],
+                          decoration: InputDecoration(
+                            labelText: "Harga",
+                            labelStyle: TextStyle(
+                              color: Colors.grey.shade700,
+                              fontWeight: FontWeight.w500,
+                            ),
+                            floatingLabelStyle: TextStyle(
+                              color: Colors.blue.shade900,
+                              fontWeight: FontWeight.w600,
+                            ),
+                            prefixIcon: Icon(
+                              Icons.monetization_on_outlined,
+                              color: Colors.blue.shade900,
+                            ),
+                            prefixText: "Rp ",
+                            prefixStyle: TextStyle(
+                              color: Colors.black87,
+                              fontWeight: FontWeight.w500,
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide(
+                                color: Colors.grey.shade300,
+                              ),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide(
+                                color: Colors.blue.shade900,
+                                width: 2,
+                              ),
+                            ),
+                            errorBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide(
+                                color: Colors.red.shade300,
+                              ),
+                            ),
+                            focusedErrorBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide(
+                                color: Colors.red.shade700,
+                                width: 2,
+                              ),
+                            ),
+                            filled: true,
+                            fillColor: Colors.grey.shade50,
+                          ),
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return "Harga tidak boleh kosong";
+                            }
+                            final cleaned = value.replaceAll('.', '');
+                            if (int.tryParse(cleaned) == null) {
+                              return "Harga harus berupa angka";
+                            }
+                            return null;
+                          },
+                        ),
+                        SizedBox(height: 20),
+                        // Kategori Dropdown
+                        DropdownButtonFormField<String>(
+                          value: _kategoriTerpilih,
+                          decoration: InputDecoration(
+                            labelText: "Kategori",
+                            labelStyle: TextStyle(
+                              color: Colors.grey.shade700,
+                              fontWeight: FontWeight.w500,
+                            ),
+                            floatingLabelStyle: TextStyle(
+                              color: Colors.blue.shade900,
+                              fontWeight: FontWeight.w600,
+                            ),
+                            prefixIcon: Icon(
+                              Icons.category_outlined,
+                              color: Colors.blue.shade900,
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide(
+                                color: Colors.grey.shade300,
+                              ),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide(
+                                color: Colors.blue.shade900,
+                                width: 2,
+                              ),
+                            ),
+                            errorBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide(
+                                color: Colors.red.shade300,
+                              ),
+                            ),
+                            focusedErrorBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide(
+                                color: Colors.red.shade700,
+                                width: 2,
+                              ),
+                            ),
+                            filled: true,
+                            fillColor: Colors.grey.shade50,
+                            contentPadding: EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 16,
+                            ),
+                          ),
+                          icon: Icon(
+                            Icons.arrow_drop_down_circle,
+                            color: Colors.blue.shade900,
+                          ),
+                          isExpanded: true,
+                          items:
+                              _kategoriList
+                                  .map(
+                                    (item) => DropdownMenuItem(
+                                      value: item,
+                                      child: Text(
+                                        item,
+                                        style: TextStyle(
+                                          fontSize: 16,
+                                          color: Colors.black87,
+                                        ),
+                                      ),
+                                    ),
+                                  )
+                                  .toList(),
+                          onChanged:
+                              (value) =>
+                                  setState(() => _kategoriTerpilih = value),
+                          validator:
+                              (value) =>
+                                  value == null ? "Pilih kategori" : null,
+                        ),
+                        SizedBox(height: 20),
+                        // Satuan Dropdown
+                        DropdownButtonFormField<String>(
+                          value: _satuanTerpilih,
+                          decoration: InputDecoration(
+                            labelText: "Satuan",
+                            labelStyle: TextStyle(
+                              color: Colors.grey.shade700,
+                              fontWeight: FontWeight.w500,
+                            ),
+                            floatingLabelStyle: TextStyle(
+                              color: Colors.blue.shade900,
+                              fontWeight: FontWeight.w600,
+                            ),
+                            prefixIcon: Icon(
+                              Icons.straighten_outlined,
+                              color: Colors.blue.shade900,
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide(
+                                color: Colors.grey.shade300,
+                              ),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide(
+                                color: Colors.blue.shade900,
+                                width: 2,
+                              ),
+                            ),
+                            errorBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide(
+                                color: Colors.red.shade300,
+                              ),
+                            ),
+                            focusedErrorBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide(
+                                color: Colors.red.shade700,
+                                width: 2,
+                              ),
+                            ),
+                            filled: true,
+                            fillColor: Colors.grey.shade50,
+                            contentPadding: EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 16,
+                            ),
+                          ),
+                          icon: Icon(
+                            Icons.arrow_drop_down_circle,
+                            color: Colors.blue.shade900,
+                          ),
+                          isExpanded: true,
+                          items:
+                              _satuanList
+                                  .map(
+                                    (item) => DropdownMenuItem(
+                                      value: item,
+                                      child: Text(
+                                        item,
+                                        style: TextStyle(
+                                          fontSize: 16,
+                                          color: Colors.black87,
+                                        ),
+                                      ),
+                                    ),
+                                  )
+                                  .toList(),
+                          onChanged:
+                              (value) =>
+                                  setState(() => _satuanTerpilih = value),
+                          validator:
+                              (value) => value == null ? "Pilih satuan" : null,
+                        ),
+                        SizedBox(height: 40),
+                        // Tombol Simpan
+                        ElevatedButton(
+                          onPressed: _simpanData,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.blue.shade900,
+                            foregroundColor: Colors.white,
+                            padding: EdgeInsets.symmetric(vertical: 16),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            elevation: 2,
+                          ),
+                          child: Text(
+                            "Simpan Layanan",
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );

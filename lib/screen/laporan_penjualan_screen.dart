@@ -1,8 +1,15 @@
+import 'dart:io';
+import 'package:path_provider/path_provider.dart';
+import 'package:permission_handler/permission_handler.dart';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:mandiri_test/models/penjualan_detail.dart';
 import '../models/penjualan.dart';
+import 'package:pdf/pdf.dart';
+import 'package:pdf/widgets.dart' as pw;
+import 'package:printing/printing.dart';
 
 class LaporanPenjualanScreen extends StatefulWidget {
   @override
@@ -17,7 +24,7 @@ class _LaporanPenjualanScreenState extends State<LaporanPenjualanScreen> {
   List<Penjualan> semuaData = [];
   List<Penjualan> dataTampil = [];
 
-  String selectedFilter = 'Hari ini';
+  String selectedFilter = 'Bulan ini';
   final filterOptions = ['Semua', 'Hari ini', 'Minggu ini', 'Bulan ini'];
 
   @override
@@ -27,74 +34,123 @@ class _LaporanPenjualanScreenState extends State<LaporanPenjualanScreen> {
   }
 
   Future<void> loadLaporan() async {
-    final snapshot =
-        await FirebaseFirestore.instance
-            .collection('penjualan')
-            .orderBy('tanggal', descending: true)
-            .get();
+    try {
+      final snapshot =
+          await FirebaseFirestore.instance
+              .collection('penjualan')
+              .orderBy('tanggal', descending: true)
+              .get();
 
-    semuaData = [];
+      semuaData = [];
 
-    for (var doc in snapshot.docs) {
-      final data = doc.data();
-      final detailSnapshot = await doc.reference.collection('detail').get();
+      for (var doc in snapshot.docs) {
+        final data = doc.data();
+        // Periksa apakah field yang diperlukan ada dan tidak null
+        if (data['nama_pelanggan'] == null ||
+            data['tanggal'] == null ||
+            data['total'] == null) {
+          print("Data tidak lengkap untuk dokumen ${doc.id}, melewati...");
+          continue; // Lewati dokumen yang tidak lengkap
+        }
 
-      final detailList =
-          detailSnapshot.docs.map((d) {
-            final dataDetail = d.data();
-            return PenjualanDetail(
-              id: d.id,
-              penjualanId: doc.id,
-              layananId: dataDetail['layanan_id'],
-              namaLayanan: dataDetail['nama_layanan'],
-              hargaSatuan: dataDetail['harga_satuan'],
-              satuan: dataDetail['satuan'],
-              jumlah: dataDetail['jumlah'],
-              total: dataDetail['total'],
-            );
-          }).toList();
+        try {
+          final detailSnapshot = await doc.reference.collection('detail').get();
 
-      semuaData.add(
-        Penjualan(
-          id: doc.id,
-          namaPelanggan: data['nama_pelanggan'],
-          tanggal: data['tanggal'],
-          total: data['total'],
-          detail: detailList,
-        ),
-      );
+          final detailList =
+              detailSnapshot.docs.map((d) {
+                final dataDetail = d.data();
+                return PenjualanDetail(
+                  id: d.id,
+                  penjualanId: doc.id,
+                  layananId: dataDetail['layanan_id'] ?? '',
+                  namaLayanan: dataDetail['nama_layanan'] ?? 'Tanpa Nama',
+                  hargaSatuan: dataDetail['harga_satuan'] ?? 0,
+                  satuan: dataDetail['satuan'] ?? 'pcs',
+                  jumlah: dataDetail['jumlah'] ?? 0,
+                  total: dataDetail['total'] ?? 0,
+                );
+              }).toList();
+
+          semuaData.add(
+            Penjualan(
+              id: doc.id,
+              namaPelanggan: data['nama_pelanggan'] ?? 'Tanpa Nama',
+              tanggal:
+                  data['tanggal'] ??
+                  DateFormat('yyyy-MM-dd').format(DateTime.now()),
+              total: data['total'] ?? 0,
+              detail: detailList,
+            ),
+          );
+        } catch (e) {
+          print("Error saat memproses detail untuk ${doc.id}: $e");
+        }
+      }
+
+      // Filter data setelah semua data di-load
+      if (mounted) {
+        _filterData();
+      }
+    } catch (e) {
+      print("Error saat memuat data: $e");
+      if (mounted) {
+        setState(() {
+          // Set state untuk menampilkan UI error jika diperlukan
+        });
+      }
     }
-
-    // Filter data setelah semua data di-load
-    _filterData();
   }
 
   void _filterData() {
+    if (semuaData.isEmpty) {
+      setState(() {
+        totalFiltered = 0;
+        totalIncome = 0;
+        dataTampil = [];
+      });
+      return;
+    }
+
     final now = DateTime.now();
     List<Penjualan> filtered = [];
 
-    if (selectedFilter == 'Hari ini') {
-      String today = DateFormat('yyyy-MM-dd').format(now);
-      filtered = semuaData.where((e) => e.tanggal == today).toList();
-    } else if (selectedFilter == 'Minggu ini') {
-      DateTime startOfWeek = now.subtract(Duration(days: now.weekday - 1));
-      filtered =
-          semuaData.where((e) {
-            DateTime date = DateTime.parse(e.tanggal);
-            return date.isAfter(startOfWeek.subtract(Duration(days: 1)));
-          }).toList();
-    } else if (selectedFilter == 'Bulan ini') {
-      String bulanIni = DateFormat('yyyy-MM').format(now);
-      filtered =
-          semuaData.where((e) => e.tanggal.startsWith(bulanIni)).toList();
-    } else {
-      filtered = semuaData;
-    }
+    try {
+      if (selectedFilter == 'Hari ini') {
+        String today = DateFormat('yyyy-MM-dd').format(now);
+        filtered = semuaData.where((e) => e.tanggal == today).toList();
+      } else if (selectedFilter == 'Minggu ini') {
+        DateTime startOfWeek = now.subtract(Duration(days: now.weekday - 1));
+        filtered =
+            semuaData.where((e) {
+              try {
+                DateTime date = DateTime.parse(e.tanggal);
+                return date.isAfter(startOfWeek.subtract(Duration(days: 1)));
+              } catch (e) {
+                print("Error parsing date: ${(e as Penjualan).tanggal}");
+                return false;
+              }
+            }).toList();
+      } else if (selectedFilter == 'Bulan ini') {
+        String bulanIni = DateFormat('yyyy-MM').format(now);
+        filtered =
+            semuaData.where((e) => e.tanggal.startsWith(bulanIni)).toList();
+      } else {
+        filtered = semuaData;
+      }
 
-    totalFiltered = filtered.length;
-    totalIncome = filtered.fold(0, (sum, item) => sum + item.total);
-    dataTampil = filtered.take(limit).toList();
-    setState(() {});
+      setState(() {
+        totalFiltered = filtered.length;
+        totalIncome = filtered.fold(0, (sum, item) => sum + item.total);
+        dataTampil = filtered.take(limit).toList();
+      });
+    } catch (e) {
+      print("Error saat memfilter data: $e");
+      setState(() {
+        totalFiltered = 0;
+        totalIncome = 0;
+        dataTampil = [];
+      });
+    }
   }
 
   String capitalizeWords(String text) {
@@ -126,6 +182,108 @@ class _LaporanPenjualanScreenState extends State<LaporanPenjualanScreen> {
     } else {
       return semuaData;
     }
+  }
+
+  Future<void> exportToPdf() async {
+    final pdf = pw.Document();
+    final currencyFormat = NumberFormat.decimalPattern('id');
+    final now = DateTime.now();
+    final bulanIni = DateFormat('MMMM yyyy', 'id_ID').format(now);
+
+    pdf.addPage(
+      pw.MultiPage(
+        build:
+            (context) => [
+              pw.Column(
+                crossAxisAlignment: pw.CrossAxisAlignment.start,
+                children: [
+                  pw.Text(
+                    'Laporan Penjualan',
+                    style: pw.TextStyle(
+                      fontSize: 22,
+                      fontWeight: pw.FontWeight.bold,
+                    ),
+                  ),
+                  pw.SizedBox(height: 5),
+                  pw.Text(
+                    'Bulan: $bulanIni',
+                    style: pw.TextStyle(fontSize: 14),
+                  ),
+                  pw.SizedBox(height: 10),
+                  pw.Text(
+                    'Total Transaksi: $totalFiltered',
+                    style: pw.TextStyle(fontSize: 12),
+                  ),
+                  pw.Text(
+                    'Total Income: Rp. ${currencyFormat.format(totalIncome)},-',
+                    style: pw.TextStyle(fontSize: 12),
+                  ),
+                  pw.SizedBox(height: 10),
+                  pw.Table.fromTextArray(
+                    border: null,
+                    cellAlignment: pw.Alignment.centerLeft,
+                    headerStyle: pw.TextStyle(
+                      fontWeight: pw.FontWeight.bold,
+                      fontSize: 12,
+                    ),
+                    cellStyle: pw.TextStyle(
+                      fontSize: 11, // ini untuk isi datanya
+                    ),
+                    headers: [
+                      'No',
+                      'Tanggal',
+                      'Pelanggan',
+                      'Layanan',
+                      'Qty',
+                      'Harga',
+                      'Total',
+                    ],
+                    data: _generateTableData(currencyFormat),
+                  ),
+                ],
+              ),
+            ],
+      ),
+    );
+
+    final status = await Permission.storage.request();
+    if (status.isGranted) {
+      final bytes = await pdf.save();
+      final downloadsDirectory = Directory('/storage/emulated/0/Download');
+      final file = File('${downloadsDirectory.path}/laporan_penjualan.pdf');
+      await file.writeAsBytes(bytes);
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('PDF berhasil disimpan di Download!')),
+      );
+    } else {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Izin penyimpanan ditolak')));
+    }
+  }
+
+  List<List<String>> _generateTableData(NumberFormat currencyFormat) {
+    List<List<String>> rows = [];
+    int no = 1;
+
+    for (var penjualan in _filteredList()) {
+      for (var detail in penjualan.detail) {
+        rows.add([
+          no.toString(),
+          penjualan.tanggal,
+          capitalizeWords(penjualan.namaPelanggan),
+          capitalizeWords(detail.namaLayanan),
+          '${detail.jumlah} ${detail.satuan}',
+          'Rp ${currencyFormat.format(detail.hargaSatuan)}',
+          'Rp ${currencyFormat.format(detail.total)}',
+        ]);
+        no++;
+      }
+    }
+    return rows;
   }
 
   @override
@@ -185,7 +343,7 @@ class _LaporanPenjualanScreenState extends State<LaporanPenjualanScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        "Income",
+                        "Pemasukan",
                         style: TextStyle(
                           fontSize: 16,
                           color: Colors.grey.shade700,
@@ -321,7 +479,7 @@ class _LaporanPenjualanScreenState extends State<LaporanPenjualanScreen> {
                     SizedBox(width: 12),
                     Expanded(
                       child: ElevatedButton.icon(
-                        onPressed: () {},
+                        onPressed: exportToPdf,
                         icon: Icon(Icons.picture_as_pdf, size: 18),
                         label: Text(
                           "Export to PDF",
@@ -452,7 +610,7 @@ class _LaporanPenjualanScreenState extends State<LaporanPenjualanScreen> {
                                         borderRadius: BorderRadius.circular(8),
                                       ),
                                       child: Text(
-                                        "Rp ${currencyFormat.format(item.total)}",
+                                        "Rp. ${currencyFormat.format(item.total)},-",
                                         style: TextStyle(
                                           fontWeight: FontWeight.bold,
                                           color: Colors.green.shade700,
