@@ -20,6 +20,8 @@ class _HomeScreenState extends State<HomeScreen> {
   int totalPemasukan = 0;
   int totalOrder = 0;
   int _selectedIndex = 0;
+  double _maxIncome = 0;
+  int jumlahHariBulanIni = 30;
   Map<int, double> dataHarian = {};
   String selectedBulan = DateFormat('yyyy-MM').format(DateTime.now());
 
@@ -105,8 +107,14 @@ class _HomeScreenState extends State<HomeScreen> {
       mapData.update(hari, (value) => value + total, ifAbsent: () => total);
     }
 
+    double maxIncome = 0;
+    if (mapData.isNotEmpty) {
+      maxIncome = mapData.values.reduce((a, b) => a > b ? a : b);
+    }
+
     setState(() {
       dataHarian = mapData;
+      _maxIncome = maxIncome; // tambahkan variable ini
     });
   }
 
@@ -273,7 +281,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                 ),
                                 SizedBox(width: 16),
                                 Text(
-                                  'Profile',
+                                  'Profil',
                                   style: TextStyle(
                                     fontSize: 16,
                                     fontWeight: FontWeight.w500,
@@ -309,7 +317,7 @@ class _HomeScreenState extends State<HomeScreen> {
                               context: context,
                               builder:
                                   (context) => AlertDialog(
-                                    title: Text('Logout'),
+                                    title: Text('Keluar'),
                                     content: Text(
                                       'Apakah Anda yakin ingin keluar dari aplikasi?',
                                     ),
@@ -334,7 +342,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                             ),
                                           ),
                                         ),
-                                        child: Text('Logout'),
+                                        child: Text('Keluar'),
                                       ),
                                     ],
                                   ),
@@ -519,8 +527,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    "Hello,",
-                    style: TextStyle(fontSize: 14, color: Colors.grey.shade600),
+                    "Hai,",
+                    style: TextStyle(fontSize: 15, color: Colors.grey.shade600),
                   ),
                   Text(
                     namaUser ?? '-',
@@ -541,8 +549,41 @@ class _HomeScreenState extends State<HomeScreen> {
             child: IconButton(
               icon: Icon(Icons.logout, color: Colors.red.shade700, size: 22),
               onPressed: () async {
-                await FirebaseAuth.instance.signOut();
-                Navigator.pushReplacementNamed(contextDrawer, '/login');
+                final confirm = await showDialog<bool>(
+                  context: contextDrawer,
+                  builder:
+                      (context) => AlertDialog(
+                        title: Text('Keluar'),
+                        content: Text(
+                          'Apakah Anda yakin ingin keluar dari aplikasi?',
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.pop(context, false),
+                            child: Text('Batal'),
+                          ),
+                          ElevatedButton(
+                            onPressed: () => Navigator.pop(context, true),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.red.shade600,
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                            ),
+                            child: Text('Keluar'),
+                          ),
+                        ],
+                      ),
+                );
+
+                if (confirm == true) {
+                  await FirebaseAuth.instance.signOut();
+                  Navigator.pushReplacementNamed(contextDrawer, '/login');
+                }
               },
             ),
           ),
@@ -619,7 +660,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   show: true,
                   drawVerticalLine: true,
                   horizontalInterval: 100000,
-                  verticalInterval: 5,
+                  verticalInterval: 3,
                   getDrawingHorizontalLine:
                       (value) =>
                           FlLine(color: Colors.grey.shade200, strokeWidth: 1),
@@ -632,9 +673,9 @@ class _HomeScreenState extends State<HomeScreen> {
                     sideTitles: SideTitles(
                       showTitles: true,
                       reservedSize: 30,
-                      interval: 5,
+                      interval: 3,
                       getTitlesWidget: (value, meta) {
-                        if (value % 5 == 0) {
+                        if (value % 3 == 0) {
                           return SideTitleWidget(
                             meta: meta, // ✅ ini
                             child: Text(
@@ -679,19 +720,20 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 ),
                 borderData: FlBorderData(show: false),
-                maxY: 600000,
+                maxY: _maxIncome + 100000,
                 minX: 1,
-                maxX: 30,
+                maxX: jumlahHariBulanIni.toDouble(),
                 minY: 0,
                 lineBarsData: [
                   LineChartBarData(
                     spots: List.generate(
-                      30,
+                      jumlahHariBulanIni,
                       (i) => FlSpot((i + 1).toDouble(), dataHarian[i + 1] ?? 0),
                     ),
+
                     isCurved: true,
-                    barWidth: 3,
-                    color: const Color(0xFF3B82F6),
+                    barWidth: 0,
+                    color: const Color.fromARGB(255, 59, 131, 246),
                     dotData: FlDotData(
                       show: true,
                       getDotPainter:
@@ -771,13 +813,23 @@ class _HomeScreenState extends State<HomeScreen> {
                 "Riwayat Penjualan",
                 Icons.history,
                 const Color(0xFFF59E0B),
-                () => Navigator.pushNamed(context, '/riwayat-penjualan'),
+                () {
+                  Navigator.pushNamed(context, '/riwayat-penjualan').then((_) {
+                    fetchDataChart();
+                    loadMonthlyData();
+                  });
+                },
               ),
               _buildMenuButton(
                 "Laporan Penjualan",
                 Icons.bar_chart,
                 const Color(0xFFEF4444),
-                () => Navigator.pushNamed(context, '/laporan-penjualan'),
+                () {
+                  Navigator.pushNamed(context, '/laporan-penjualan').then((_) {
+                    fetchDataChart();
+                    loadMonthlyData();
+                  });
+                },
               ),
             ],
           ),
@@ -872,7 +924,15 @@ class _HomeScreenState extends State<HomeScreen> {
           }),
           onChanged: (value) {
             if (value != null) {
-              setState(() => selectedBulan = value);
+              // setState(() => selectedBulan = value);
+              setState(() {
+                selectedBulan = value;
+                final date = DateFormat('yyyy-MM').parse(selectedBulan);
+                jumlahHariBulanIni = DateUtils.getDaysInMonth(
+                  date.year,
+                  date.month,
+                );
+              });
               fetchDataChart();
               loadMonthlyData();
             }

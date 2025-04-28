@@ -124,45 +124,30 @@ class _LoginScreenState extends State<LoginScreen> {
                 SizedBox(height: 60),
 
                 // Header
-                Text(
-                  "Sign In",
-                  style: TextStyle(
-                    fontSize: 36,
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: 0.5,
-                  ),
-                ),
-
-                SizedBox(height: 40),
+                // Text(
+                //   "Sign In",
+                //   style: TextStyle(
+                //     fontSize: 36,
+                //     color: Colors.white,
+                //     fontWeight: FontWeight.bold,
+                //     letterSpacing: 0.5,
+                //   ),
+                // ),
+                SizedBox(height: 45),
 
                 // Avatar Container with improved design
                 Center(
-                  child: Container(
-                    width: 140,
-                    height: 140,
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(30),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.1),
-                          blurRadius: 10,
-                          offset: Offset(0, 5),
-                        ),
-                      ],
-                    ),
-                    child: Center(
-                      child: Icon(
-                        Icons.person_rounded,
-                        size: 70,
-                        color: Color(0xFF00224F),
-                      ),
+                  child: Center(
+                    child: Image.asset(
+                      'assets/images/logo_laundri.png',
+                      width: 160, // Ukuran logo di dalam container
+                      height: 160,
+                      fit: BoxFit.contain,
                     ),
                   ),
                 ),
 
-                SizedBox(height: 30),
+                SizedBox(height: 25),
 
                 // Welcome Text
                 Center(
