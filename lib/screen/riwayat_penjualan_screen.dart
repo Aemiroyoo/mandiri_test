@@ -1,3 +1,4 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
@@ -7,6 +8,8 @@ import '../models/penjualan_detail.dart';
 import 'input_penjualan_screen.dart';
 
 class RiwayatPenjualanScreen extends StatefulWidget {
+  const RiwayatPenjualanScreen({super.key});
+
   @override
   State<RiwayatPenjualanScreen> createState() => _RiwayatPenjualanScreenState();
 }
@@ -21,13 +24,28 @@ String capitalizeEachWord(String text) {
 }
 
 class _RiwayatPenjualanScreenState extends State<RiwayatPenjualanScreen> {
+  String? ownerId;
   List<Penjualan> dataPenjualan = [];
   bool isLoading = true;
 
   @override
   void initState() {
     super.initState();
-    fetchPenjualan();
+    ambilOwnerId().then((_) {
+      fetchPenjualan();
+    });
+  }
+
+  Future<void> ambilOwnerId() async {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) return;
+
+    final userDoc =
+        await FirebaseFirestore.instance.collection('users').doc(uid).get();
+
+    final data = userDoc.data();
+    ownerId = data?['owner_id'] ?? uid;
+    print("📌 owner_id aktif: $ownerId");
   }
 
   Future<void> fetchPenjualan() async {
@@ -36,9 +54,11 @@ class _RiwayatPenjualanScreenState extends State<RiwayatPenjualanScreen> {
     });
 
     try {
+      final uid = FirebaseAuth.instance.currentUser!.uid;
       final snapshot =
           await FirebaseFirestore.instance
               .collection('penjualan')
+              .where('owner_id', isEqualTo: uid)
               .orderBy('tanggal', descending: true)
               .get();
 

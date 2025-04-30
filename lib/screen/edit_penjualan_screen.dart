@@ -1,3 +1,4 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
@@ -27,21 +28,52 @@ String capitalizeEachWord(String text) {
 
 class _EditPenjualanScreenState extends State<EditPenjualanScreen> {
   final namaController = TextEditingController();
-
   List<PenjualanDetail> listDetail = [];
   List<LayananLaundry> semuaLayanan = [];
-
   bool isLoading = true;
+  String? ownerId;
 
   @override
   void initState() {
     super.initState();
     namaController.text = widget.data.namaPelanggan;
-    loadData();
+    ambilOwnerId().then((_) {
+      loadData();
+    });
+  }
+
+  Future<void> ambilOwnerId() async {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) return;
+
+    final userDoc =
+        await FirebaseFirestore.instance.collection('users').doc(uid).get();
+
+    final data = userDoc.data();
+    ownerId = data?['owner_id'] ?? uid;
+    print('📌 owner_id aktif: $ownerId');
   }
 
   Future<void> loadData() async {
-    semuaLayanan = await DBHelper().getAllLayanan();
+    if (ownerId == null) return;
+
+    final layananSnapshot =
+        await FirebaseFirestore.instance
+            .collection('layanan_laundry')
+            .where('owner_id', isEqualTo: ownerId)
+            .get();
+
+    semuaLayanan =
+        layananSnapshot.docs.map((doc) {
+          final d = doc.data();
+          return LayananLaundry(
+            id: doc.id,
+            namaLayanan: d['namaLayanan'],
+            kategori: d['kategori'],
+            harga: d['harga'],
+            satuan: d['satuan'],
+          );
+        }).toList();
 
     final detailSnapshot =
         await FirebaseFirestore.instance

@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 
@@ -17,6 +18,8 @@ class LaporanPenjualanScreen extends StatefulWidget {
 }
 
 class _LaporanPenjualanScreenState extends State<LaporanPenjualanScreen> {
+  String? ownerId;
+
   int limit = 10;
   int totalIncome = 0;
   int totalFiltered = 0;
@@ -35,9 +38,11 @@ class _LaporanPenjualanScreenState extends State<LaporanPenjualanScreen> {
 
   Future<void> loadLaporan() async {
     try {
+      final uid = FirebaseAuth.instance.currentUser!.uid;
       final snapshot =
           await FirebaseFirestore.instance
               .collection('penjualan')
+              .where('owner_id', isEqualTo: uid)
               .orderBy('tanggal', descending: true)
               .get();
 

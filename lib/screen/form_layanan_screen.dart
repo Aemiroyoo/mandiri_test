@@ -1,3 +1,5 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
@@ -10,6 +12,8 @@ class FormLayananScreen extends StatefulWidget {
 }
 
 class _FormLayananScreenState extends State<FormLayananScreen> {
+  String? ownerId;
+
   final _formKey = GlobalKey<FormState>();
   final TextEditingController _namaController = TextEditingController();
   final TextEditingController _hargaController = TextEditingController();
@@ -63,7 +67,16 @@ class _FormLayananScreenState extends State<FormLayananScreen> {
       print("DATA YANG AKAN DISIMPAN:");
       print(layanan.toMap());
 
-      await DBHelper().insertLayanan(layanan);
+      final uid = FirebaseAuth.instance.currentUser!.uid;
+
+      await FirebaseFirestore.instance.collection('layanan_laundry').add({
+        'namaLayanan': layanan.namaLayanan,
+        'kategori': layanan.kategori,
+        'harga': layanan.harga,
+        'satuan': layanan.satuan,
+        'owner_id': uid, // ✅ TAMBAH INI
+      });
+
       Navigator.pop(context, true);
     }
   }

@@ -1,3 +1,4 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -13,7 +14,8 @@ class DaftarHargaScreen extends StatefulWidget {
 }
 
 class _DaftarHargaScreenState extends State<DaftarHargaScreen> {
-  final List<String> _kategoriList = ["Kiloan", "Satuan", "Boneka", "Sepatu"];
+  String? ownerId;
+  // final List<String> _kategoriList = ["Kiloan", "Satuan", "Boneka", "Sepatu"];
   final _formatCurrency = NumberFormat.currency(
     locale: 'id_ID',
     symbol: 'Rp. ',
@@ -21,13 +23,28 @@ class _DaftarHargaScreenState extends State<DaftarHargaScreen> {
   );
   final TextEditingController _searchController = TextEditingController();
   List<LayananLaundry> daftarHarga = [];
+  List<String> _kategoriList = [];
   String _keyword = '';
   bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
-    fetchData();
+    ambilOwnerId().then((_) {
+      fetchData();
+    });
+  }
+
+  Future<void> ambilOwnerId() async {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) return;
+
+    final userDoc =
+        await FirebaseFirestore.instance.collection('users').doc(uid).get();
+
+    final data = userDoc.data();
+    ownerId = data?['owner_id'] ?? uid;
+    print('📌 owner_id aktif: $ownerId');
   }
 
   @override
@@ -39,13 +56,31 @@ class _DaftarHargaScreenState extends State<DaftarHargaScreen> {
   Future<void> fetchData() async {
     setState(() => _isLoading = true);
     try {
-      final data = await FirestoreService.getAllLayanan();
+      final data =
+          await FirebaseFirestore.instance
+              .collection('layanan_laundry')
+              .where('owner_id', isEqualTo: ownerId)
+              .get();
+
+      final layananList =
+          data.docs.map((doc) {
+            final d = doc.data();
+            return LayananLaundry(
+              id: doc.id,
+              namaLayanan: d['namaLayanan'],
+              kategori: d['kategori'],
+              harga: d['harga'],
+              satuan: d['satuan'],
+            );
+          }).toList();
+
       setState(() {
+        _kategoriList =
+            layananList.map((item) => item.kategori).toSet().toList();
         daftarHarga =
-            data.where((item) {
-              if (_keyword.isEmpty) {
-                return true;
-              } else if (_kategoriList.contains(_keyword)) {
+            layananList.where((item) {
+              if (_keyword.isEmpty) return true;
+              if (_kategoriList.contains(_keyword)) {
                 return item.kategori.toLowerCase() == _keyword.toLowerCase();
               } else {
                 return item.namaLayanan.toLowerCase().contains(

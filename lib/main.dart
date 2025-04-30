@@ -8,6 +8,7 @@ import 'package:mandiri_test/screen/input_penjualan_screen.dart';
 import 'package:mandiri_test/screen/laporan_penjualan_screen.dart';
 import 'package:mandiri_test/screen/profile_screen.dart';
 import 'package:mandiri_test/screen/riwayat_penjualan_screen.dart';
+import 'package:mandiri_test/screen/tambah_karyawan_screen.dart';
 import 'package:mandiri_test/sign_in/login_screen.dart';
 import 'package:mandiri_test/home/home_screen.dart'; // tambahkan ini kalau belum
 
@@ -36,20 +37,22 @@ class MyApp extends StatelessWidget {
 
       routes: {
         '/login': (context) => LoginScreen(),
-        '/home':
-            (context) =>
-                HomeScreen(userRole: 'admin_master'), // contoh sementara
+        '/home': (context) {
+          final args = ModalRoute.of(context)?.settings.arguments as String?;
+          return HomeScreen(userRole: args ?? 'admin_karyawan');
+        }, // contoh sementara
         '/daftar-harga': (context) => DaftarHargaScreen(),
         '/input-penjualan': (context) => InputPenjualanScreen(),
         '/riwayat-penjualan': (context) => RiwayatPenjualanScreen(),
         '/laporan-penjualan': (context) => LaporanPenjualanScreen(),
         '/profile': (context) => ProfileScreen(),
+        '/tambah-karyawan': (context) => TambahKaryawanScreen(),
       },
 
       // Cek apakah user sudah login
       home:
           isLoggedIn
-              ? HomeScreen(userRole: 'admin_master')
+              ? HomeScreen(userRole: 'master')
               : LoginScreen(), // sementara
     );
   }

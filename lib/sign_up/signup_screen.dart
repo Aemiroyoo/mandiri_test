@@ -182,18 +182,21 @@ class _SignupScreenState extends State<SignupScreen> {
                                               passwordController.text.trim(),
                                         );
 
-                                    // Simpan data user tambahan ke Firestore
+                                    final uid = credential.user!.uid;
+
+                                    // Simpan data user ke Firestore
                                     await FirebaseFirestore.instance
                                         .collection('users')
-                                        .doc(credential.user!.uid)
+                                        .doc(uid)
                                         .set({
-                                          'uid': credential.user!.uid,
+                                          'uid': uid,
                                           'email': credential.user!.email,
                                           'nama': namaController.text.trim(),
                                           'no_telp':
                                               noTelpController.text.trim(),
-                                          'role':
-                                              'admin_karyawan', // default role
+                                          'role': 'master', // ✅ pemilik laundry
+                                          'owner_id':
+                                              uid, // ✅ menunjuk dirinya sendiri
                                           'created_at':
                                               DateTime.now().toIso8601String(),
                                         });
@@ -235,6 +238,7 @@ class _SignupScreenState extends State<SignupScreen> {
                                     });
                                   }
                                 },
+
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.white,
                           foregroundColor: Color(0xFF00224F),

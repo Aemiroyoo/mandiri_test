@@ -14,9 +14,10 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  String? ownerId;
   String? namaUser;
   String? emailUser;
-  late final String userRole;
+  String userRole = 'admin_karyawan';
   int totalPemasukan = 0;
   int totalOrder = 0;
   int _selectedIndex = 0;
@@ -28,16 +29,38 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
-
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      userRole =
-          ModalRoute.of(context)?.settings.arguments as String? ??
-          'admin_karyawan';
-      fetchDataChart();
-      loadMonthlyData();
-      getUserData();
-      getEmailData();
+      _initializeData(); // panggil fungsi async di luar
     });
+  }
+
+  Future<void> _initializeData() async {
+    final user = FirebaseAuth.instance.currentUser;
+    print("🔥 UID login: ${user?.uid}");
+
+    if (user == null) return;
+
+    try {
+      final userDoc =
+          await FirebaseFirestore.instance
+              .collection('users')
+              .doc(user.uid)
+              .get();
+
+      final data = userDoc.data();
+      print("🧾 Data user: $data");
+
+      setState(() {
+        userRole = (data?['role'] ?? 'admin_karyawan').toString().trim();
+        namaUser = data?['nama'] ?? 'User';
+        emailUser = user.email;
+      });
+
+      await fetchDataChart();
+      await loadMonthlyData();
+    } catch (e) {
+      print("❌ Error saat ambil data user: $e");
+    }
   }
 
   Future<void> getUserData() async {
@@ -64,9 +87,12 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> loadMonthlyData() async {
     try {
+      final uid = FirebaseAuth.instance.currentUser!.uid;
+
       final snapshot =
           await FirebaseFirestore.instance
               .collection('penjualan')
+              .where('owner_id', isEqualTo: uid) // ✅ Tambahkan ini
               .where('tanggal', isGreaterThanOrEqualTo: '$selectedBulan-01')
               .where('tanggal', isLessThanOrEqualTo: '$selectedBulan-31')
               .get();
@@ -92,9 +118,12 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> fetchDataChart() async {
+    final uid = FirebaseAuth.instance.currentUser!.uid;
+
     final snapshot =
         await FirebaseFirestore.instance
             .collection('penjualan')
+            .where('owner_id', isEqualTo: uid) // ✅ Tambahkan ini
             .where('tanggal', isGreaterThanOrEqualTo: '$selectedBulan-01')
             .where('tanggal', isLessThanOrEqualTo: '$selectedBulan-31')
             .get();
@@ -114,7 +143,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
     setState(() {
       dataHarian = mapData;
-      _maxIncome = maxIncome; // tambahkan variable ini
+      _maxIncome = maxIncome;
     });
   }
 
@@ -299,6 +328,60 @@ class _HomeScreenState extends State<HomeScreen> {
                           ),
                         ),
                       ),
+
+                      // Divider
+                      Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 24),
+                        child: Divider(height: 1, color: Colors.grey.shade200),
+                      ),
+
+                      if (userRole == 'master')
+                        Material(
+                          color: Colors.transparent,
+                          child: InkWell(
+                            onTap: () {
+                              Navigator.pop(context); // tutup drawer
+                              Navigator.pushNamed(context, '/tambah-karyawan');
+                            },
+                            child: Container(
+                              padding: EdgeInsets.symmetric(
+                                horizontal: 24,
+                                vertical: 16,
+                              ),
+                              child: Row(
+                                children: [
+                                  Container(
+                                    padding: EdgeInsets.all(8),
+                                    decoration: BoxDecoration(
+                                      color: Colors.teal.shade50,
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                    child: Icon(
+                                      Icons.group_add,
+                                      color: Colors.teal,
+                                      size: 22,
+                                    ),
+                                  ),
+                                  SizedBox(width: 16),
+                                  Text(
+                                    'Tambah Karyawan',
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w500,
+                                      color: Colors.grey.shade800,
+                                    ),
+                                  ),
+                                  Spacer(),
+                                  Icon(
+                                    Icons.arrow_forward_ios,
+                                    size: 14,
+                                    color: Colors.grey.shade400,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
 
                       // Divider
                       Padding(

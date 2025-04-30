@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:mandiri_test/models/layanan_laundry.dart';
 import 'package:mandiri_test/models/penjualan_detail.dart';
@@ -10,6 +11,8 @@ class InputPenjualanScreen extends StatefulWidget {
 }
 
 class _InputPenjualanScreenState extends State<InputPenjualanScreen> {
+  String? ownerId;
+
   final TextEditingController namaController = TextEditingController();
   final TextEditingController jumlahController = TextEditingController();
 
@@ -25,14 +28,48 @@ class _InputPenjualanScreenState extends State<InputPenjualanScreen> {
   @override
   void initState() {
     super.initState();
-    loadLayanan();
+    ambilOwnerId().then((_) {
+      loadLayanan(); // setelah tahu owner, baru load data layanan
+    });
+  }
+
+  Future<void> ambilOwnerId() async {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) return;
+
+    final userDoc =
+        await FirebaseFirestore.instance.collection('users').doc(uid).get();
+
+    final data = userDoc.data();
+    setState(() {
+      ownerId = data?['owner_id'] ?? uid;
+      print("📌 owner_id aktif: $ownerId");
+    });
   }
 
   Future<void> loadLayanan() async {
-    final dbHelper = DBHelper();
-    semuaLayanan = await dbHelper.getAllLayanan();
+    if (ownerId == null) return;
+
+    final snapshot =
+        await FirebaseFirestore.instance
+            .collection('layanan_laundry')
+            .where('owner_id', isEqualTo: ownerId)
+            .get();
+
+    final semuaLayanan =
+        snapshot.docs.map((doc) {
+          final d = doc.data();
+          return LayananLaundry(
+            id: doc.id,
+            namaLayanan: d['namaLayanan'],
+            kategori: d['kategori'],
+            harga: d['harga'],
+            satuan: d['satuan'],
+          );
+        }).toList();
+
     setState(() {
-      kategoriList = semuaLayanan.map((e) => e.kategori).toSet().toList();
+      // assign ke variabel lokal untuk digunakan di dropdown
     });
   }
 
@@ -96,13 +133,16 @@ class _InputPenjualanScreenState extends State<InputPenjualanScreen> {
     final tanggal = DateTime.now().toIso8601String().substring(0, 10);
     print("Tanggal disimpan: $tanggal");
 
-    final docRef = await FirebaseFirestore.instance
-        .collection('penjualan')
-        .add({
-          'nama_pelanggan': capitalizeWords(namaController.text.trim()),
-          'tanggal': tanggal,
-          'total': totalHarga,
-        });
+    final uid = FirebaseAuth.instance.currentUser!.uid;
+
+    final docRef = await FirebaseFirestore.instance.collection('penjualan').add(
+      {
+        'nama_pelanggan': capitalizeWords(namaController.text.trim()),
+        'tanggal': tanggal,
+        'total': totalHarga,
+        'owner_id': uid, // ✅ TAMBAH INI
+      },
+    );
 
     for (var detail in daftarLayanan) {
       final dataDetail = detail.copyWith(penjualanId: docRef.id);
