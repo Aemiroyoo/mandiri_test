@@ -51,6 +51,7 @@ class _HomeScreenState extends State<HomeScreen> {
       print("🧾 Data user: $data");
 
       setState(() {
+        ownerId = data?['owner_id'] ?? user.uid;
         userRole = (data?['role'] ?? 'admin_karyawan').toString().trim();
         namaUser = data?['nama'] ?? 'User';
         emailUser = user.email;
@@ -92,7 +93,7 @@ class _HomeScreenState extends State<HomeScreen> {
       final snapshot =
           await FirebaseFirestore.instance
               .collection('penjualan')
-              .where('owner_id', isEqualTo: uid) // ✅ Tambahkan ini
+              .where('owner_id', isEqualTo: ownerId) // ✅ Tambahkan ini
               .where('tanggal', isGreaterThanOrEqualTo: '$selectedBulan-01')
               .where('tanggal', isLessThanOrEqualTo: '$selectedBulan-31')
               .get();
@@ -123,7 +124,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final snapshot =
         await FirebaseFirestore.instance
             .collection('penjualan')
-            .where('owner_id', isEqualTo: uid) // ✅ Tambahkan ini
+            .where('owner_id', isEqualTo: ownerId) // ✅ Tambahkan ini
             .where('tanggal', isGreaterThanOrEqualTo: '$selectedBulan-01')
             .where('tanggal', isLessThanOrEqualTo: '$selectedBulan-31')
             .get();

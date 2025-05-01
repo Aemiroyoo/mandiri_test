@@ -1,7 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:mandiri_test/sign_in/login_screen.dart';
 
 class SignupScreen extends StatefulWidget {
@@ -19,6 +18,134 @@ class _SignupScreenState extends State<SignupScreen> {
   bool _obscurePassword = true;
   bool _isLoading = false;
 
+  void _showSnackbar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.red.shade700,
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
+  String _capitalizeEachWord(String text) {
+    return text
+        .toLowerCase()
+        .split(' ')
+        .where((e) => e.isNotEmpty)
+        .map((e) => e[0].toUpperCase() + e.substring(1))
+        .join(' ');
+  }
+
+  Future<void> _handleSignUp() async {
+    final email = emailController.text.trim();
+    final password = passwordController.text.trim();
+    final nama = namaController.text.trim();
+    final telp = noTelpController.text.trim();
+
+    if (nama.isEmpty || nama.replaceAll(' ', '').isEmpty) {
+      _showSnackbar("Nama wajib diisi");
+      return;
+    }
+
+    final emailRegex = RegExp(r'^[\w\.-]+@[\w\.-]+\.\w{2,4}$');
+    if (!emailRegex.hasMatch(email)) {
+      _showSnackbar("Format email tidak valid");
+      return;
+    }
+
+    if (telp.isEmpty ||
+        telp.length < 10 ||
+        !RegExp(r'^[0-9]+$').hasMatch(telp)) {
+      _showSnackbar("Nomor telepon harus berupa angka minimal 10 digit");
+      return;
+    }
+
+    if (password.length < 6) {
+      _showSnackbar("Password minimal 6 karakter");
+      return;
+    }
+
+    setState(() => _isLoading = true);
+
+    try {
+      final auth = FirebaseAuth.instance;
+      final credential = await auth.createUserWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
+
+      final uid = credential.user!.uid;
+
+      await FirebaseFirestore.instance.collection('users').doc(uid).set({
+        'uid': uid,
+        'email': email,
+        'nama': _capitalizeEachWord(nama),
+        'no_telp': telp,
+        'role': 'master',
+        'owner_id': uid,
+        'created_at': DateTime.now().toIso8601String(),
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("Registrasi berhasil!"),
+          backgroundColor: Colors.green,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => LoginScreen()),
+      );
+    } on FirebaseAuthException catch (e) {
+      String msg = '';
+      if (e.code == 'email-already-in-use') {
+        msg = 'Email sudah digunakan';
+      } else if (e.code == 'weak-password') {
+        msg = 'Password terlalu lemah';
+      } else {
+        msg = 'Terjadi kesalahan: ${e.message}';
+      }
+
+      _showSnackbar(msg);
+    } catch (e) {
+      _showSnackbar("Terjadi kesalahan: $e");
+    } finally {
+      setState(() => _isLoading = false);
+    }
+  }
+
+  Widget _buildInputField({
+    required TextEditingController controller,
+    required String hintText,
+    required IconData icon,
+    TextInputType keyboardType = TextInputType.text,
+    TextCapitalization capitalization = TextCapitalization.none,
+  }) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.white24, width: 1),
+      ),
+      child: TextField(
+        controller: controller,
+        keyboardType: keyboardType,
+        textCapitalization: capitalization,
+        style: TextStyle(color: Colors.white),
+        decoration: InputDecoration(
+          hintText: hintText,
+          hintStyle: TextStyle(color: Colors.white60),
+          prefixIcon: Icon(icon, color: Colors.white70),
+          border: InputBorder.none,
+          contentPadding: EdgeInsets.symmetric(vertical: 16),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -27,42 +154,6 @@ class _SignupScreenState extends State<SignupScreen> {
       body: SafeArea(
         child: Stack(
           children: [
-            // Back button
-            // Positioned(
-            //   top: 16,
-            //   left: 16,
-            //   child: InkWell(
-            //     onTap: () {
-            //       Navigator.pushReplacement(
-            //         context,
-            //         MaterialPageRoute(builder: (_) => LoginScreen()),
-            //       );
-            //     },
-            //     child: Container(
-            //       padding: EdgeInsets.all(8),
-            //       decoration: BoxDecoration(
-            //         color: Colors.white.withOpacity(0.1),
-            //         borderRadius: BorderRadius.circular(12),
-            //       ),
-            //       child: Row(
-            //         mainAxisSize: MainAxisSize.min,
-            //         children: [
-            //           Icon(Icons.arrow_back, color: Colors.white, size: 20),
-            //           SizedBox(width: 4),
-            //           Text(
-            //             "Back",
-            //             style: TextStyle(
-            //               color: Colors.white,
-            //               fontWeight: FontWeight.w500,
-            //             ),
-            //           ),
-            //         ],
-            //       ),
-            //     ),
-            //   ),
-            // ),
-
-            // Form content
             SingleChildScrollView(
               physics: BouncingScrollPhysics(),
               child: Padding(
@@ -71,8 +162,6 @@ class _SignupScreenState extends State<SignupScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     SizedBox(height: 80),
-
-                    // Title
                     Text(
                       "Sign Up",
                       style: TextStyle(
@@ -82,46 +171,33 @@ class _SignupScreenState extends State<SignupScreen> {
                         letterSpacing: 0.5,
                       ),
                     ),
-
                     SizedBox(height: 12),
-
-                    // Subtitle
                     Text(
                       "Create your account to get started",
                       style: TextStyle(fontSize: 16, color: Colors.white70),
                     ),
-
                     SizedBox(height: 40),
-
-                    // Input fields
                     _buildInputField(
                       controller: namaController,
                       hintText: "Nama Lengkap",
                       icon: Icons.person_outline,
                       capitalization: TextCapitalization.words,
                     ),
-
                     SizedBox(height: 20),
-
                     _buildInputField(
                       controller: noTelpController,
                       hintText: "Nomor Telepon",
                       icon: Icons.phone_outlined,
                       keyboardType: TextInputType.phone,
                     ),
-
                     SizedBox(height: 20),
-
                     _buildInputField(
                       controller: emailController,
                       hintText: "Email",
                       icon: Icons.email_outlined,
                       keyboardType: TextInputType.emailAddress,
                     ),
-
                     SizedBox(height: 20),
-
-                    // Password field with toggle visibility
                     Container(
                       decoration: BoxDecoration(
                         color: Colors.white.withOpacity(0.1),
@@ -157,88 +233,12 @@ class _SignupScreenState extends State<SignupScreen> {
                         ),
                       ),
                     ),
-
                     SizedBox(height: 40),
-
-                    // Sign Up Button
                     SizedBox(
                       width: double.infinity,
                       height: 56,
                       child: ElevatedButton(
-                        onPressed:
-                            _isLoading
-                                ? null
-                                : () async {
-                                  setState(() {
-                                    _isLoading = true;
-                                  });
-
-                                  try {
-                                    final credential = await FirebaseAuth
-                                        .instance
-                                        .createUserWithEmailAndPassword(
-                                          email: emailController.text.trim(),
-                                          password:
-                                              passwordController.text.trim(),
-                                        );
-
-                                    final uid = credential.user!.uid;
-
-                                    // Simpan data user ke Firestore
-                                    await FirebaseFirestore.instance
-                                        .collection('users')
-                                        .doc(uid)
-                                        .set({
-                                          'uid': uid,
-                                          'email': credential.user!.email,
-                                          'nama': namaController.text.trim(),
-                                          'no_telp':
-                                              noTelpController.text.trim(),
-                                          'role': 'master', // ✅ pemilik laundry
-                                          'owner_id':
-                                              uid, // ✅ menunjuk dirinya sendiri
-                                          'created_at':
-                                              DateTime.now().toIso8601String(),
-                                        });
-
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(
-                                        content: Text("Registrasi berhasil!"),
-                                        backgroundColor: Colors.green,
-                                        behavior: SnackBarBehavior.floating,
-                                      ),
-                                    );
-
-                                    Navigator.pushReplacement(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (_) => LoginScreen(),
-                                      ),
-                                    );
-                                  } on FirebaseAuthException catch (e) {
-                                    String msg = '';
-                                    if (e.code == 'email-already-in-use') {
-                                      msg = 'Email sudah digunakan';
-                                    } else if (e.code == 'weak-password') {
-                                      msg = 'Password terlalu lemah';
-                                    } else {
-                                      msg = 'Terjadi kesalahan: ${e.message}';
-                                    }
-
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(
-                                        content: Text(msg),
-                                        backgroundColor: Colors.red,
-                                        behavior: SnackBarBehavior.floating,
-                                      ),
-                                    );
-                                  } finally {
-                                    setState(() {
-                                      _isLoading = false;
-                                    });
-                                  }
-                                },
-
+                        onPressed: _isLoading ? null : _handleSignUp,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.white,
                           foregroundColor: Color(0xFF00224F),
@@ -269,10 +269,7 @@ class _SignupScreenState extends State<SignupScreen> {
                                 ),
                       ),
                     ),
-
                     SizedBox(height: 30),
-
-                    // Already have account text
                     Center(
                       child: TextButton(
                         onPressed: () {
@@ -298,42 +295,12 @@ class _SignupScreenState extends State<SignupScreen> {
                         ),
                       ),
                     ),
-
                     SizedBox(height: 40),
                   ],
                 ),
               ),
             ),
           ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildInputField({
-    required TextEditingController controller,
-    required String hintText,
-    required IconData icon,
-    TextInputType keyboardType = TextInputType.text,
-    TextCapitalization capitalization = TextCapitalization.none,
-  }) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white24, width: 1),
-      ),
-      child: TextField(
-        controller: controller,
-        keyboardType: keyboardType,
-        textCapitalization: capitalization,
-        style: TextStyle(color: Colors.white),
-        decoration: InputDecoration(
-          hintText: hintText,
-          hintStyle: TextStyle(color: Colors.white60),
-          prefixIcon: Icon(icon, color: Colors.white70),
-          border: InputBorder.none,
-          contentPadding: EdgeInsets.symmetric(vertical: 16),
         ),
       ),
     );

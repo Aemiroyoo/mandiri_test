@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:mandiri_test/models/layanan_laundry.dart';
 import 'package:mandiri_test/models/penjualan_detail.dart';
 import '../db/db_helper.dart';
@@ -9,6 +10,12 @@ class InputPenjualanScreen extends StatefulWidget {
   @override
   State<InputPenjualanScreen> createState() => _InputPenjualanScreenState();
 }
+
+final formatRupiah = NumberFormat.currency(
+  locale: 'id_ID',
+  symbol: 'Rp ',
+  decimalDigits: 0,
+);
 
 class _InputPenjualanScreenState extends State<InputPenjualanScreen> {
   String? ownerId;
@@ -28,8 +35,13 @@ class _InputPenjualanScreenState extends State<InputPenjualanScreen> {
   @override
   void initState() {
     super.initState();
+    // ambilOwnerId().then((_) {
+    //   loadLayanan(); // setelah tahu owner, baru load data layanan
+    // });
     ambilOwnerId().then((_) {
-      loadLayanan(); // setelah tahu owner, baru load data layanan
+      if (ownerId != null) {
+        loadLayanan();
+      }
     });
   }
 
@@ -56,7 +68,7 @@ class _InputPenjualanScreenState extends State<InputPenjualanScreen> {
             .where('owner_id', isEqualTo: ownerId)
             .get();
 
-    final semuaLayanan =
+    final layananList =
         snapshot.docs.map((doc) {
           final d = doc.data();
           return LayananLaundry(
@@ -69,34 +81,66 @@ class _InputPenjualanScreenState extends State<InputPenjualanScreen> {
         }).toList();
 
     setState(() {
-      // assign ke variabel lokal untuk digunakan di dropdown
+      semuaLayanan = layananList;
+      kategoriList =
+          layananList
+              .where((e) => e.kategori.trim().isNotEmpty)
+              .map((e) => e.kategori.trim())
+              .toSet()
+              .toList();
     });
   }
 
   void tambahKeDaftar() {
-    if (layananTerpilih != null && jumlahController.text.isNotEmpty) {
-      final jumlah = int.tryParse(jumlahController.text) ?? 0;
-      if (jumlah == 0) return;
-
-      final total = jumlah * layananTerpilih!.harga;
-
-      final detail = PenjualanDetail(
-        penjualanId: '',
-        layananId: layananTerpilih!.id!,
-        namaLayanan: layananTerpilih!.namaLayanan,
-        hargaSatuan: layananTerpilih!.harga,
-        satuan: layananTerpilih!.satuan,
-        jumlah: jumlah,
-        total: total,
+    if (layananTerpilih == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("Silakan pilih layanan terlebih dahulu"),
+          backgroundColor: Colors.orange,
+        ),
       );
-
-      setState(() {
-        daftarLayanan.add(detail);
-        totalHarga += total;
-        jumlahController.clear();
-        layananTerpilih = null;
-      });
+      return;
     }
+
+    if (jumlahController.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("Mohon isi jumlah layanan"),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
+    final jumlah = int.tryParse(jumlahController.text) ?? 0;
+    if (jumlah <= 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("Jumlah harus lebih dari 0"),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
+    final total = jumlah * layananTerpilih!.harga;
+
+    final detail = PenjualanDetail(
+      penjualanId: '',
+      layananId: layananTerpilih!.id!,
+      namaLayanan: layananTerpilih!.namaLayanan,
+      hargaSatuan: layananTerpilih!.harga,
+      satuan: layananTerpilih!.satuan,
+      jumlah: jumlah,
+      total: total,
+    );
+
+    setState(() {
+      daftarLayanan.add(detail);
+      totalHarga += total;
+      jumlahController.clear();
+      layananTerpilih = null;
+    });
   }
 
   void hapusLayanan(int index) {
@@ -140,7 +184,7 @@ class _InputPenjualanScreenState extends State<InputPenjualanScreen> {
         'nama_pelanggan': capitalizeWords(namaController.text.trim()),
         'tanggal': tanggal,
         'total': totalHarga,
-        'owner_id': uid, // ✅ TAMBAH INI
+        'owner_id': ownerId, // ✅ TAMBAH INI
       },
     );
 
@@ -270,7 +314,11 @@ class _InputPenjualanScreenState extends State<InputPenjualanScreen> {
                         ),
                         SizedBox(height: 12),
                         DropdownButtonFormField<String>(
-                          value: kategoriTerpilih,
+                          value:
+                              kategoriList.contains(kategoriTerpilih)
+                                  ? kategoriTerpilih
+                                  : null,
+
                           hint: Text("Pilih Kategori"),
                           decoration: InputDecoration(
                             prefixIcon: Icon(
@@ -457,7 +505,7 @@ class _InputPenjualanScreenState extends State<InputPenjualanScreen> {
                                   ),
                                 ),
                                 subtitle: Text(
-                                  "${item.jumlah} ${item.satuan} x Rp${item.hargaSatuan}",
+                                  "${item.jumlah} ${item.satuan} x ${formatRupiah.format(item.hargaSatuan)}",
                                   style: TextStyle(color: Colors.grey.shade700),
                                 ),
                                 trailing: Row(
@@ -473,7 +521,8 @@ class _InputPenjualanScreenState extends State<InputPenjualanScreen> {
                                         borderRadius: BorderRadius.circular(20),
                                       ),
                                       child: Text(
-                                        "Rp ${item.total}",
+                                        // "Rp ${item.total}",
+                                        "${formatRupiah.format(item.total)}",
                                         style: TextStyle(
                                           fontWeight: FontWeight.bold,
                                           color: Colors.blue.shade900,
@@ -517,7 +566,7 @@ class _InputPenjualanScreenState extends State<InputPenjualanScreen> {
                                   borderRadius: BorderRadius.circular(20),
                                 ),
                                 child: Text(
-                                  "Rp $totalHarga",
+                                  "${formatRupiah.format(totalHarga)}",
                                   style: TextStyle(
                                     fontSize: 16,
                                     fontWeight: FontWeight.bold,

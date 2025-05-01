@@ -54,11 +54,15 @@ class _RiwayatPenjualanScreenState extends State<RiwayatPenjualanScreen> {
     });
 
     try {
-      final uid = FirebaseAuth.instance.currentUser!.uid;
+      if (ownerId == null) {
+        print("❌ ownerId masih null");
+        return;
+      }
+
       final snapshot =
           await FirebaseFirestore.instance
               .collection('penjualan')
-              .where('owner_id', isEqualTo: uid)
+              .where('owner_id', isEqualTo: ownerId) // ✅ FIXED: pakai ownerId!
               .orderBy('tanggal', descending: true)
               .get();
 
@@ -93,15 +97,10 @@ class _RiwayatPenjualanScreenState extends State<RiwayatPenjualanScreen> {
         isLoading = false;
       });
 
-      print("Total transaksi: ${list.length}");
-      for (var p in list) {
-        print("Pelanggan: ${p.namaPelanggan}, layanan: ${p.detail.length}");
-      }
+      print("✅ Total transaksi: ${list.length}");
     } catch (e) {
-      print("Gagal ambil data penjualan: $e");
-      setState(() {
-        isLoading = false;
-      });
+      print("❌ Gagal ambil data penjualan: $e");
+      setState(() => isLoading = false);
     }
   }
 
