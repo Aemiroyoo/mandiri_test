@@ -1,5 +1,7 @@
 import 'dart:io';
+import 'package:excel/excel.dart' as xls;
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:mandiri_test/main.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 
@@ -33,7 +35,37 @@ class _LaporanPenjualanScreenState extends State<LaporanPenjualanScreen> {
   @override
   void initState() {
     super.initState();
-    loadLaporan();
+    ambilOwnerId().then((_) {
+      if (ownerId != null) {
+        loadLaporan();
+      }
+    });
+    // loadLaporan();
+  }
+
+  Future<void> ambilOwnerId() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    final userDoc =
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .get();
+    final data = userDoc.data();
+
+    String uid = user.uid;
+    String? ownerField = data?['owner_id'];
+
+    // Hanya pakai owner_id kalau nilainya valid dan bukan kosong
+    final realOwnerId =
+        (ownerField != null && ownerField.isNotEmpty) ? ownerField : uid;
+
+    setState(() {
+      ownerId = realOwnerId;
+    });
+
+    print("✅ ownerId yang digunakan untuk filter penjualan: $ownerId");
   }
 
   Future<void> loadLaporan() async {
@@ -42,7 +74,7 @@ class _LaporanPenjualanScreenState extends State<LaporanPenjualanScreen> {
       final snapshot =
           await FirebaseFirestore.instance
               .collection('penjualan')
-              .where('owner_id', isEqualTo: uid)
+              .where('owner_id', isEqualTo: ownerId)
               .orderBy('tanggal', descending: true)
               .get();
 
@@ -189,6 +221,127 @@ class _LaporanPenjualanScreenState extends State<LaporanPenjualanScreen> {
     }
   }
 
+  Future<void> exportToExcel() async {
+    final now = DateTime.now();
+    final bulan = DateFormat('MMMM', 'id_ID').format(now).toLowerCase();
+    final tahun = now.year;
+    final timestamp = DateFormat('HHmmss').format(now);
+    final namaFile = 'laporan_penjualan_${bulan}_${tahun}_$timestamp.xlsx';
+
+    final excel = xls.Excel.createExcel();
+    final sheetObject = excel['Laporan'];
+    // var sheetObject = xls.Excel.createExcel()['Laporan'];
+
+    if (sheetObject == null) {
+      print('❌ Sheet tidak ditemukan');
+      return;
+    }
+
+    // Header
+    sheetObject.appendRow([
+      'No',
+      'Tanggal',
+      'Pelanggan',
+      'Layanan',
+      'Qty',
+      'Harga',
+      'Total',
+    ]);
+
+    int no = 1;
+    final data = _filteredList();
+
+    if (data.isEmpty) {
+      print('📭 Data kosong, tidak ada yang ditulis');
+    }
+    for (var penjualan in _filteredList()) {
+      for (var detail in penjualan.detail) {
+        sheetObject.appendRow([
+          no,
+          penjualan.tanggal,
+          capitalizeWords(penjualan.namaPelanggan),
+          capitalizeWords(detail.namaLayanan),
+          '${detail.jumlah} ${detail.satuan}',
+          detail.hargaSatuan.toDouble(),
+          detail.total.toDouble(),
+        ]);
+        no++;
+      }
+    }
+
+    // Simpan ke folder Download
+    final status = await Permission.storage.request();
+    if (status.isGranted) {
+      final downloadsDir = Directory('/storage/emulated/0/Download');
+      final fileBytes = excel.encode();
+      final file = File('${downloadsDir.path}/$namaFile');
+      await file.writeAsBytes(fileBytes!);
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              Icon(Icons.check_circle, color: Colors.white),
+              SizedBox(width: 10),
+              Expanded(
+                child: Text.rich(
+                  TextSpan(
+                    children: [
+                      TextSpan(
+                        text: 'Berhasil! ',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      TextSpan(text: 'File excel berhasil disimpan!'),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+          backgroundColor: Colors.green.shade600,
+          duration: Duration(seconds: 4),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          margin: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        ),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              Icon(Icons.error_outline, color: Colors.white),
+              SizedBox(width: 10),
+              Expanded(
+                child: Text.rich(
+                  TextSpan(
+                    children: [
+                      TextSpan(
+                        text: 'Gagal! ',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      TextSpan(text: 'Izin penyimpanan ditolak.'),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+          backgroundColor: Colors.red.shade700,
+          duration: Duration(seconds: 4),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          margin: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        ),
+      );
+    }
+  }
+
   Future<void> exportToPdf() async {
     final pdf = pw.Document();
     final currencyFormat = NumberFormat.decimalPattern('id');
@@ -255,18 +408,77 @@ class _LaporanPenjualanScreenState extends State<LaporanPenjualanScreen> {
     if (status.isGranted) {
       final bytes = await pdf.save();
       final downloadsDirectory = Directory('/storage/emulated/0/Download');
-      final file = File('${downloadsDirectory.path}/laporan_penjualan.pdf');
+      final bulan = DateFormat('MMMM', 'id_ID').format(now).toLowerCase();
+      final tahun = now.year;
+      final timestamp = DateFormat('HHmmss').format(DateTime.now());
+      final file = File(
+        '${downloadsDirectory.path}/laporan_penjualan_${bulan}_${tahun}_$timestamp.pdf',
+      );
       await file.writeAsBytes(bytes);
 
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('PDF berhasil disimpan di Download!')),
+        SnackBar(
+          content: Row(
+            children: [
+              Icon(Icons.picture_as_pdf, color: Colors.white),
+              SizedBox(width: 10),
+              Expanded(
+                child: Text.rich(
+                  TextSpan(
+                    children: [
+                      TextSpan(
+                        text: 'Berhasil! ',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      TextSpan(text: 'File PDF berhasil disimpan!'),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+          backgroundColor: Colors.deepPurple.shade600,
+          duration: Duration(seconds: 4),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          margin: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        ),
       );
     } else {
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Izin penyimpanan ditolak')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              Icon(Icons.error_outline, color: Colors.white),
+              SizedBox(width: 10),
+              Expanded(
+                child: Text.rich(
+                  TextSpan(
+                    children: [
+                      TextSpan(
+                        text: 'Gagal! ',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      TextSpan(text: 'Izin penyimpanan ditolak.'),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+          backgroundColor: Colors.red.shade700,
+          duration: Duration(seconds: 4),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          margin: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        ),
+      );
     }
   }
 
@@ -464,7 +676,7 @@ class _LaporanPenjualanScreenState extends State<LaporanPenjualanScreen> {
                   children: [
                     Expanded(
                       child: ElevatedButton.icon(
-                        onPressed: () {},
+                        onPressed: exportToExcel,
                         icon: Icon(Icons.file_copy, size: 18),
                         label: Text(
                           "Export to Excel",
